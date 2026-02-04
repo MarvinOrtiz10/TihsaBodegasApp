@@ -1,0 +1,66 @@
+{
+  "expo": {
+    "name": "TIHSA BODEGA",
+    "slug": "tihsa-bodega-app",
+    "version": "1.0.5",
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "custom photos permission",
+          "cameraPermission": "Allow $(PRODUCT_NAME) to open the camera",
+          "//": "Disables the microphone permission",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      "expo-asset",
+      "expo-font",
+      "expo-secure-store",
+      "@react-native-community/datetimepicker"
+    ],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "orientation": "landscape",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/imgs/splash-screen.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#f2f2f2"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.marvintihsa.tihsabodegasapp",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "description": "",
+    "extra": {
+      "eas": {
+        "projectId": "4eae1493-f4f9-4206-9b3a-3c53198edc78"
+      }
+    },
+    "android": {
+      "versionCode": 6,
+      "package": "com.marvintihsa.tihsabodegasapp"
+    },
+    "owner": "marvintihsa"
+  }
+}
