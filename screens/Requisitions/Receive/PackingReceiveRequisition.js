@@ -1,55 +1,67 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
-import Header from "../../components/Header.js";
+import Header from "../../../components/Header.js";
 import { useSelector, useDispatch } from "react-redux";
 import {
-  StyleSheet,
+  ActivityIndicator,
   Dimensions,
   ImageBackground,
+  InteractionManager,
   Linking,
   Platform,
   StatusBar,
+  StyleSheet,
+  TextInput,
   TouchableOpacity,
+  Vibration,
   View,
-  InteractionManager,
   useWindowDimensions,
 } from "react-native";
-import argonTheme from "../../constants/Theme.js";
+import argonTheme from "../../../constants/Theme.js";
 import { Block, Text, theme } from "galio-framework";
 const { width, height } = Dimensions.get("screen");
 const isMovil = Math.min(width, height) < 650 ? true : false;
 
 import axios from "axios";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { Input } from "../../components/index.js";
-import Select2 from "../../components/Select2.js";
+import { Input } from "../../../components/index.js";
+import Select2 from "../../../components/Select2.js";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-import ToastNotification from "../../components/ToastNotification.js";
+import ToastNotification from "../../../components/ToastNotification.js";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import LottieView from "lottie-react-native";
-import ReceiveOrder from "../../assets/animations/Receive-order.json";
+import ScanSuccessfull from "../../../assets/animations/scan-successfull.json";
 import {
   Requisition,
   UpdateRequisitionPicking,
   Articles,
-} from "../../settings/EndPoints.js";
-import { Images } from "../../constants/index.js";
-import InputAutoGrowing from "../../components/InputAutoGrowing.js";
-import { useGetBodegasQuery, useGetArticlesQuery } from "../../services/Api.js";
+} from "../../../settings/EndPoints.js";
+import { Images } from "../../../constants/index.js";
+import InputAutoGrowing from "../../../components/InputAutoGrowing.js";
+import {
+  useGetBodegasQuery,
+  useGetArticlesQuery,
+} from "../../../services/Api.js";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import RequisitionCart from "../../components/RequisitionCart.js";
-import RenderEditArticle from "../Articles/EditArticle.js";
-import RenderViewArticle from "../Articles/ViewArticle.js";
-import Modals from "../../components/Modals.js";
-import CardArticle from "../../components/CardArticle.js";
-import { TouchableWithoutFeedback } from "react-native-web";
+import RequisitionCart from "../../../components/RequisitionCart.js";
+import RenderEditArticle from "../../Articles/EditArticle.js";
+import RenderViewArticle from "../../Articles/ViewArticle.js";
+import Modals from "../../../components/Modals.js";
+import CardArticle from "../../../components/CardArticle.js";
 import {
   preprocessDataOnce,
   searchEngineAdvance,
-} from "../Features/Helpers/SearchEngine.js";
+} from "../../Features/Helpers/SearchEngine.js";
 import { FlashList } from "@shopify/flash-list";
 import { Alert } from "react-native";
-import EmptyCart from "../../assets/animations/empty-cart.json";
-import TimelineItem from "../../components/Timeline.js";
+import InputSpinner from "react-native-input-spinner";
+import {
+  faArrowRotateLeft,
+  faFileArrowUp,
+  faInbox,
+  faPaperPlane,
+  faUserCheck,
+} from "@fortawesome/free-solid-svg-icons";
+import TimelineItem from "../../../components/Timeline.js";
 import { BlurView } from "expo-blur";
 
 //Variable para identificar el sistema operativo del dispositivo del cual se está accediendo al app
@@ -57,7 +69,7 @@ const Iphone = Platform.OS === "ios" ? true : false;
 const paddingTopNotification = Iphone ? 55 : 40;
 const BACKGROUND_KEY = "app_background";
 
-const NewPickingRequisition = () => {
+const PackingReceiveRequisition = () => {
   const { width, height } = useWindowDimensions();
   const isMovil = Math.min(width, height) < 650;
   const isLandscape = width > height;
@@ -68,6 +80,8 @@ const NewPickingRequisition = () => {
   const codEmp = userState.length !== 0 ? userState[0].CodEmp : 1;
   const codBodega = userState.length !== 0 ? userState[0].CodBodega : 1;
   const Usuario = userState.length !== 0 ? userState[0].Usuario : "Sin usuario";
+  const Permisos = userState.length !== 0 ? userState[0].Permisos : false;
+  const SuperAdmin = userState.length !== 0 ? userState[0].SuperAdmin : false;
   const baseUrl = Requisition.EndPoint;
   const baseUrlUpdatePicking = UpdateRequisitionPicking.EndPoint;
   const baseUrlArticles = Articles.EndPoint;
@@ -91,20 +105,26 @@ const NewPickingRequisition = () => {
   const [destino, setDestino] = useState("");
   const [codBodegaOrigen, setCodBodegaOrigen] = useState(0);
   const [codBodegaDestino, setCodBodegaDestino] = useState(0);
-  const [fecha, setFecha] = useState(new Date());
-  const [horaCreacion, setHoraCreacion] = useState(
-    new Date().toLocaleTimeString("es-GT", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit", // opcional
-    }),
-  );
+  const [fecha, setFecha] = useState(null);
+  const [horaCreacion, setHoraCreacion] = useState(null);
   const [fechaReserva, setFechaReserva] = useState(null);
-  const [horaReserva, setHoraReserva] = useState(null);
   const [usuarioReserva, setUsuarioReserva] = useState("");
+  const [horaReserva, setHoraReserva] = useState(null);
   const [reservada, setReservada] = useState(false);
   const [observaciones, setObservaciones] = useState("");
-  const [usuarioCreacion, setUsuarioCreacion] = useState(Usuario);
+  const [usuarioCreacion, setUsuarioCreacion] = useState("");
+  const [enviada, setEnviada] = useState(false);
+  const [usuarioEnvia, setUsuarioEnvia] = useState("");
+  const [fechaEnvia, setFechaEnvia] = useState("");
+  const [horaEnvia, setHoraEnvia] = useState("");
+  const [recibida, setRecibida] = useState(false);
+  const [usuarioRecibe, setUsuarioRecibe] = useState("");
+  const [fechaRecibe, setFechaRecibe] = useState("");
+  const [horaRecibe, setHoraRecibe] = useState("");
+  const [trasladada, setTrasladada] = useState(false);
+  const [usuarioCarga, setUsuarioCarga] = useState("");
+  const [fechaCarga, setFechaCarga] = useState(null);
+  const [horaCarga, setHoraCarga] = useState(null);
   const [editar, setEditar] = useState(false);
   const [modal, setModal] = useState(false);
   /*Variables para agregar o editar artículos*/
@@ -129,13 +149,16 @@ const NewPickingRequisition = () => {
   const [requisitionDetailsChecked, setRequisitionDetailsChecked] = useState(
     [],
   );
-  //Variables para confiración de código
+  const [requisitionDetailsPacked, setRequisitionDetailsPacked] = useState([]);
   const [searchText, setSearchText] = useState("");
+  const [scannedText, setScannedText] = useState("");
   const [dataArticles, setDataArticles] = useState([]);
   const [showClearIcon, setShowClearIcon] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
+  const [cantidadPl, setCantidadPl] = useState(1);
+  const [packingChecked, setPackingChecked] = useState(false);
   const flatListRef = useRef(null);
-  const searchBarRef = useRef(null);
+  const scanBarRef = useRef(null);
 
   const loadBackground = async () => {
     try {
@@ -167,6 +190,7 @@ const NewPickingRequisition = () => {
   };
 
   useEffect(() => {
+    cargarInformacion();
     loadBackground();
   }, []);
   useEffect(() => {
@@ -184,7 +208,8 @@ const NewPickingRequisition = () => {
       //Carga los artículos de la bodega de origen
       cargarArticulos(data.CodBodegaOrigen.value);
       setDestino(data.Destino);
-      const fechaCreacionParse = parseFechaApi(data.Fecha) ?? new Date();
+      setReservada(data.Reservado);
+      const fechaCreacionParse = parseFechaApi(data.Fecha) ?? new Date()
       setFecha(fechaCreacionParse);
       if (fechaCreacionParse) {
         setHoraCreacion(
@@ -207,23 +232,34 @@ const NewPickingRequisition = () => {
         );
       }
       setObservaciones(data.Observaciones);
-      setReservada(data.Reservado);
       setUsuarioReserva(data.UsuarioReserva);
       setUsuarioCreacion(data.Usuario);
+      setEnviada(data.Enviada);
+      setUsuarioEnvia(data.UsuarioEnvia);
+      setFechaEnvia(data.FechaEnvia);
+      setHoraEnvia(data.HoraEnvia);
+      setRecibida(data.Entregada);
+      setUsuarioRecibe(data.UsuarioRecibe);
+      setFechaRecibe(data.FechaRecibe);
+      setHoraRecibe(data.HoraRecibe);
+      setTrasladada(data.Trasladada);
+      setUsuarioCarga(data.UsuarioCarga);
+      const fechaCargaParse = parseFechaApi(data.FechaCarga);
+      setFechaCarga(fechaCargaParse);
+      if (fechaCargaParse) {
+        setHoraCarga(
+          fechaCargaParse.toLocaleTimeString("es-GT", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit", // opcional
+          }),
+        );
+      }
+      setFechaCarga(data.FechaCarga);
+
       // 🔹 FILTRO DE DETALLES POR PICKING
       const detalles = data.DetalleRequisicion ?? [];
-      const detallesChecked = [];
-      const detallesPendientes = [];
-
-      for (const item of detalles) {
-        if (item.Picking === true) {
-          detallesChecked.push(item);
-        } else {
-          detallesPendientes.push(item);
-        }
-      }
-      setRequisitionDetails(detallesPendientes);
-      setRequisitionDetailsChecked(detallesChecked);
+      setRequisitionDetailsPacked(detalles);
       setRequisitionsDetailsCopy(detalles);
     }
   }, [infoRequisition]);
@@ -231,10 +267,16 @@ const NewPickingRequisition = () => {
   const requisitionCodes = useMemo(() => {
     return new Set(requisitionDetails.map((i) => i.Codigo));
   }, [requisitionDetails]);
+  useEffect(() => {
+    const completed = requisitionDetailsPacked.every(
+      (item) => Number(item.Cantidad) === Number(item.CantidadPL),
+    );
+    setPackingChecked(completed);
+  }, [requisitionDetailsPacked]);
 
   const cargarInformacion = () => {
     setIsLoading(true);
-    axios.get(`${baseUrl}/${numTraslado}`).then((response) => {
+    axios.get(`${baseUrl}/${order}`).then((response) => {
       var respuesta = response.data;
       if (respuesta.Error == 0) {
         setInfoRequisition([respuesta.Data]);
@@ -263,7 +305,7 @@ const NewPickingRequisition = () => {
         back
         onBackPress={handlePressBack}
         scrollTittle={false}
-        title={"NUEVA REQUISICION"}
+        title={"PACKING DE RECEPCIÓN DE REQUISICION"}
         blur
       />
     );
@@ -296,8 +338,106 @@ const NewPickingRequisition = () => {
         value={searchText}
         onChangeText={handleSearch}
         selectTextOnFocus={true}
-        ref={searchBarRef}
       />
+    );
+  };
+  //Función para mostrar la barra de escaneo de cada página
+  const renderScanner = () => {
+    return (
+      <View
+        style={{
+          height: 58,
+          paddingHorizontal: 5,
+          alignItems: "center",
+          flexDirection: "row",
+        }}
+      >
+        <View style={styles.searchContainer}>
+          <TextInput
+            right
+            color="black"
+            style={{
+              flex: 1,
+              padding: 10,
+              fontSize: 16,
+              color: "black",
+            }}
+            value={scannedText}
+            placeholder={"Escanear artículos"}
+            placeholderTextColor="#8898AA"
+            onChange={setScannedText}
+            onSubmitEditing={scanArticleByCode}
+            ref={scanBarRef}
+            autoFocus
+          />
+
+          {scannedText ? (
+            <TouchableOpacity
+              onPress={setScannedText("")}
+              style={scannedText && styles.circleCloseButton}
+            >
+              <FontAwesomeIcon name={"xmark"} size={16} color={"#666666"} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              onPress={() => setModal(true)}
+              style={scannedText && styles.circleCloseButton}
+            >
+              <FontAwesomeIcon
+                size={16}
+                color={theme.COLORS.MUTED}
+                icon={"barcode"}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+        <View
+          style={{
+            width: 90,
+            height: 45,
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: "white",
+            borderRadius: 5,
+            marginLeft: 5,
+          }}
+        >
+          <InputSpinner
+            min={0}
+            value={cantidadPl}
+            onChange={(num) => setCantidadPl(num)}
+            onBlur={() => {
+              if (!cantidadPl || cantidadPl === 0) {
+                setCantidadPl(1);
+              }
+            }}
+            skin="default"
+            shadow={false}
+            showBorder={false}
+            rounded={false}
+            height={45}
+            buttonStyle={{
+              width: 30,
+              height: 45,
+              borderRadius: 5,
+              padding: 0,
+              margin: 0,
+              backgroundColor: "#007AFF",
+            }}
+            buttonTextStyle={{
+              fontSize: 18,
+              fontWeight: "600",
+            }}
+            inputStyle={{
+              height: 45,
+              fontSize: 12,
+              textAlign: "center",
+            }}
+            iconSize={8}
+            returnKeyType="done"
+          />
+        </View>
+      </View>
     );
   };
   const handleSearch = (text) => {
@@ -325,7 +465,107 @@ const NewPickingRequisition = () => {
 
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
   };
+  const refocusScan = () => {
+    InteractionManager.runAfterInteractions(() => {
+      scanBarRef.current?.focus();
+    });
+  };
+  const scanArticleByCode = async (event) => {
 
+    const scannedValue = event.nativeEvent.text?.toUpperCase();
+    if(trasladada || recibida){
+      return;
+    }
+    if (!scannedValue) {
+      refocusScan();
+      return;
+    }
+
+    try {
+      let indexPacked = requisitionDetailsPacked.findIndex((item) => {
+        const codigo = String(item.Codigo).trim().toUpperCase();
+        const codigo2 = String(item.Codigo2).trim().toUpperCase();
+        return codigo === scannedValue || codigo2 === scannedValue;
+      });
+
+      if (indexPacked === -1) {
+        notificar(
+          "top",
+          "No se ha encontrado el código escaneado",
+          "error",
+          paddingTopNotification,
+        );
+        return;
+      }
+
+      if (cantidadPl === 0) {
+        notificar(
+          "top",
+          "La cantidad de packing no puede ser cero",
+          "error",
+          paddingTopNotification,
+        );
+        return;
+      }
+
+      setIsLoading(true);
+
+      // 🔥 CASO 1: PACKED
+      if (indexPacked !== -1) {
+        const article = requisitionDetailsPacked[indexPacked];
+
+        if ((article.CantidadPL || 0) + cantidadPl > article.Cantidad) {
+          notificar(
+            "top",
+            `La cantidad de packing excede para el artículo ${article.Codigo}`,
+            "error",
+            paddingTopNotification,
+          );
+          return;
+        }
+
+        const data = {
+          CodEmp: codEmp,
+          NumTraslado: numTraslado,
+          Codigo: article.Codigo,
+          CantidadPL: cantidadPl,
+        };
+
+        const response = await axios.put(
+          `${baseUrl}/Recibido/Packing/${numTraslado}`,
+          data,
+          { headers: { "content-type": "application/json" } },
+        );
+
+        const { Error, Mensaje, Data } = response.data;
+
+        if (Error === 0) {
+          notificar("top", Mensaje, "success", paddingTopNotification);
+
+          setRequisitionDetailsPacked((prev) =>
+            prev.map((item, i) =>
+              i === indexPacked
+                ? { ...item, CantidadPL: Data.CantidadPL }
+                : item,
+            ),
+          );
+        } else {
+          notificar("top", Mensaje, "error", paddingTopNotification);
+        }
+      }
+    } catch (error) {
+      notificar(
+        "top",
+        "Error al procesar el escaneo",
+        "error",
+        paddingTopNotification,
+      );
+    } finally {
+      setCantidadPl(1);
+      setIsLoading(false);
+      refocusScan();
+    }
+  };
   const handleClear = () => {
     setSearchText("");
     setShowClearIcon(false);
@@ -369,11 +609,13 @@ const NewPickingRequisition = () => {
 
       const data = {
         CodEmp: codEmp,
-        numTraslado: numTraslado,
+        numTraslado: order,
         Codigo: ArticleCode,
         Cantidad: item.Cantidad,
+        CantidadPicking: item.Cantidad,
         Picking: true,
       };
+
       const response = await axios.put(baseUrlUpdatePicking, data, {
         headers: { "content-type": "application/json" },
       });
@@ -427,9 +669,10 @@ const NewPickingRequisition = () => {
 
       const data = {
         CodEmp: codEmp,
-        numTraslado: numTraslado,
+        numTraslado: order,
         Codigo: ArticleCode,
         Cantidad: item.Cantidad,
+        CantidadPicking: item.Cantidad,
         Picking: false,
       };
       const response = await axios.put(baseUrlUpdatePicking, data, {
@@ -477,38 +720,6 @@ const NewPickingRequisition = () => {
       setIsLoading(false);
     }
   }, []);
-  const handleToggleReservada = async () => {
-    // pasa de false → true
-    // 🔥 PUT al API (misma URL, método distinto)
-    const response = await axios.put(
-      `${baseUrl}/Reservar/${numTraslado}/${Usuario}/${!reservada}`,
-      {
-        headers: { "content-type": "application/json" },
-      },
-    );
-
-    const respuesta = response.data;
-
-    if (respuesta.Error === 0) {
-      notificar("top", respuesta.Mensaje, "success", paddingTopNotification);
-      const respuesta2 = respuesta.Data;
-      setReservada(respuesta2.Reservado);
-      setUsuarioReserva(respuesta2.Usuario);
-      const fechaReservaParse = parseFechaApi(respuesta2.FechaReserva);
-      setFechaReserva(fechaReservaParse);
-      if (fechaReservaParse) {
-        setHoraReserva(
-          fechaReservaParse.toLocaleTimeString("es-GT", {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit", // opcional
-          }),
-        );
-      }
-    } else {
-      notificar("top", respuesta.Mensaje, "error", paddingTopNotification);
-    }
-  };
 
   const handleEditRequisitionDetail = async () => {
     const articuloExiste = requisitionDetails.find(
@@ -664,13 +875,9 @@ const NewPickingRequisition = () => {
         Picking: false,
       };
 
-      const response = await axios.post(
-        `${baseUrl}/${numTraslado}`,
-        newArticle,
-        {
-          headers: { "content-type": "application/json" },
-        },
-      );
+      const response = await axios.post(`${baseUrl}/${order}`, newArticle, {
+        headers: { "content-type": "application/json" },
+      });
 
       const respuesta = response.data;
 
@@ -715,35 +922,16 @@ const NewPickingRequisition = () => {
     try {
       setIsLoading(true);
       // 🔥 DELETE al API (NumTraslado + Codigo)
-      const response = await axios.delete(
-        `${baseUrl}/${numTraslado}/${codigo}`,
-        {
-          headers: { "content-type": "application/json" },
-        },
-      );
+      const response = await axios.delete(`${baseUrl}/Recibido/${order}/${codigo}`, {
+        headers: { "content-type": "application/json" },
+      });
 
       const respuesta = response.data;
-
       if (respuesta.Error !== 0) {
         notificar("top", respuesta.Mensaje, "error", paddingTopNotification);
         return;
       }
-
       notificar("top", respuesta.Mensaje, "success", paddingTopNotification);
-
-      // 🔁 Eliminar del estado local
-      const detallesActualizados = requisitionDetails
-        .filter((item) => item.Codigo !== codigo)
-        .sort((a, b) => a.Secuencia - b.Secuencia)
-        .map((item, index) => ({
-          ...item,
-          Secuencia: index + 1,
-        }));
-
-      setRequisitionDetails(detallesActualizados);
-
-      // (opcional) sincronizar copia si la usas
-      setRequisitionsDetailsCopy(detallesActualizados);
     } catch (error) {
       console.error("❌ Error al eliminar artículo:", error);
       notificar(
@@ -753,13 +941,15 @@ const NewPickingRequisition = () => {
         paddingTopNotification,
       );
     } finally {
+      cargarInformacion();
       setIsLoading(false);
+      refocusScan();
     }
   };
   const confirmDeleteRequisitionDetail = (codigo) => {
     Alert.alert(
       "Eliminar artículo",
-      `¿Estás seguro que deseas eliminar el artículo ${codigo} de la requisición?`,
+      `¿Estás seguro que deseas eliminar el packing list del artículo ${codigo} de la requisición?`,
       [
         {
           text: "Cancelar",
@@ -778,8 +968,10 @@ const NewPickingRequisition = () => {
     <TouchableOpacity
       onPress={() => {
         if (item.AlreadyAdded) {
-          console.log(item.Cantidad);
-          setCantidad(item.Cantidad);
+          const QuantityInRequisition =
+            requisitionDetails.find((i) => i.Codigo === item.Codigo)
+              ?.Cantidad || 0;
+          setCantidad(QuantityInRequisition);
           setEditar(true);
         } else {
           setEditar(false);
@@ -810,6 +1002,7 @@ const NewPickingRequisition = () => {
       const detalles = [
         ...requisitionDetails,
         ...requisitionDetailsChecked,
+        ...requisitionDetailsPacked
       ].sort((a, b) => a.Secuencia - b.Secuencia);
 
       const dataRequisition = {
@@ -825,33 +1018,10 @@ const NewPickingRequisition = () => {
         Reservado: reservada,
         DetalleRequisicion: detalles,
       };
-      if (destino.trim() === "") {
-        notificar(
-          "top",
-          "El campo destino es obligatorio",
-          "error",
-          paddingTopNotification,
-        );
-        return;
-      }
-      if (!codBodegaOrigen || !codBodegaDestino) {
-        notificar(
-          "top",
-          "Debe seleccionar bodegas de origen y destino",
-          "error",
-          paddingTopNotification,
-        );
-        return;
-      }
-
       // 🔥 PUT al API (misma URL, método distinto)
-      const response = await axios.put(
-        `${baseUrl}/${numTraslado}`,
-        dataRequisition,
-        {
-          headers: { "content-type": "application/json" },
-        },
-      );
+      const response = await axios.put(`${baseUrl}/${order}`, dataRequisition, {
+        headers: { "content-type": "application/json" },
+      });
 
       const respuesta = response.data;
 
@@ -873,78 +1043,6 @@ const NewPickingRequisition = () => {
       setIsLoading(false);
     }
   };
-  const handlePressCreateRequisition = async () => {
-    try {
-      const toISO = (date) =>
-        date instanceof Date && !isNaN(date.getTime())
-          ? date.toISOString()
-          : null;
-
-      const fechaISO = toISO(fecha);
-      const fechaReservaISO = reservada ? toISO(fechaReserva) : null;
-
-      setIsLoading(true);
-
-      const dataRequisition = {
-        NumTraslado: numTraslado,
-        Destino: destino,
-        Fecha: fechaISO,
-        Usuario: usuarioCreacion,
-        CodBodegaOrigen: codBodegaOrigen,
-        CodBodegaDestino: codBodegaDestino,
-        Observaciones: observaciones,
-        UsuarioReserva: usuarioReserva,
-        FechaReserva: fechaReservaISO,
-        Reservado: reservada,
-        DetalleRequisicion: [],
-      };
-      if (destino.trim() === "") {
-        notificar(
-          "top",
-          "El campo destino es obligatorio",
-          "error",
-          paddingTopNotification,
-        );
-        return;
-      }
-      if (!codBodegaOrigen || !codBodegaDestino) {
-        notificar(
-          "top",
-          "Debe seleccionar bodegas de origen y destino",
-          "error",
-          paddingTopNotification,
-        );
-        return;
-      }
-      // 🔥 POST al API (misma URL, método distinto)
-      const response = await axios.post(`${baseUrl}/New`, dataRequisition, {
-        headers: { "content-type": "application/json" },
-      });
-
-      const respuesta = response.data;
-
-      if (respuesta.Error === 0) {
-        notificar("top", respuesta.Mensaje, "success", paddingTopNotification);
-        setNumTraslado(respuesta.Data);
-        InteractionManager.runAfterInteractions(() => {
-          searchBarRef.current?.focus();
-        });
-      } else {
-        notificar("top", respuesta.Mensaje, "error", paddingTopNotification);
-      }
-    } catch (error) {
-      console.error("❌ Error al crear requisición:", error);
-      notificar(
-        "top",
-        "Error al crear la requisición",
-        "error",
-        paddingTopNotification,
-      );
-    } finally {
-      refocusSearchBar();
-      setIsLoading(false);
-    }
-  };
   const formatFecha = (date) => {
     if (!(date instanceof Date) || isNaN(date.getTime())) return "";
     return date.toLocaleDateString("es-GT"); // 26/01/2026
@@ -954,11 +1052,58 @@ const NewPickingRequisition = () => {
     const d = value instanceof Date ? value : new Date(value);
     return isNaN(d.getTime()) ? null : d;
   };
-  const refocusSearchBar = () => {
-    InteractionManager.runAfterInteractions(() => {
-      searchBarRef.current?.focus();
-    });
+  const handlePressSendPacking = async () => {
+    try {
+      setIsLoading(true);
+      const response = await axios.put(
+        `${baseUrl}/Recibido/${numTraslado}/${Usuario}`,
+        { headers: { "content-type": "application/json" } },
+      );
+
+      const { Error, Mensaje, Data } = response.data;
+
+      if (Error === 0) {
+        notificar("top", Mensaje, "success", paddingTopNotification);
+      } else {
+        notificar("top", Mensaje, "error", paddingTopNotification);
+      }
+    } catch (error) {
+      notificar(
+        "error",
+        "Ha ocurrido un error al realizar la petición: " + error,
+        paddingTopNotification,
+      );
+    } finally {
+      cargarInformacion();
+      setIsLoading(false);
+    }
   };
+  const handlePressRevertReceiveStatus = async () => {
+    try {
+      setIsLoading(true);
+      const response = await axios.put(
+        `${baseUrl}/Recibido/Revertir/${numTraslado}`,
+        { headers: { "content-type": "application/json" } },
+      );
+
+      const { Error, Mensaje, Data } = response.data;
+      if (Error === 0) {
+        notificar("top", Mensaje, "success", paddingTopNotification);
+      } else {
+        notificar("top", Mensaje, "error", paddingTopNotification);
+      }
+    } catch (error) {
+      notificar(
+        "error",
+        "Ha ocurrido un error al realizar la petición: " + error,
+        paddingTopNotification,
+      );
+    } finally {
+      cargarInformacion();
+      setIsLoading(false);
+    }
+  };
+  
   return (
     <ImageBackground source={backgroundImage} style={styles.home}>
       <StatusBar
@@ -1103,10 +1248,8 @@ const NewPickingRequisition = () => {
                     onSelect={handleSelectBodegaOrigen}
                     placeholder="- Bodega origen -"
                     doneText="Aceptar"
+                    searchable={true}
                   />
-                  {!codBodegaOrigen && (
-                    <Text style={styles.requiredSelect}>* Obligatorio</Text>
-                  )}
                 </Block>
                 <Block
                   style={{
@@ -1122,9 +1265,6 @@ const NewPickingRequisition = () => {
                     placeholder="- Bodega destino -"
                     doneText="Aceptar"
                   />
-                  {!codBodegaDestino && (
-                    <Text style={styles.requiredSelect}>* Obligatorio</Text>
-                  )}
                 </Block>
               </Block>
               <Block style={styles.inputContainer}>
@@ -1138,476 +1278,212 @@ const NewPickingRequisition = () => {
                   ref={observacionesRef}
                 />
               </Block>
-
-              {numTraslado !== 0 && (
-                <>
-                  <View
-                    style={{
-                      justifyContent: "center",
-                      alignItems: "center",
-                      marginVertical: 5,
-                    }}
-                  >
-                    <View style={styles.divider} />
-                  </View>
-                  <Block
-                    style={{
-                      flexDirection: "row",
-                      width: "100%",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      marginVertical: 10,
-                    }}
-                  >
-                    <FontAwesomeIcon
-                      icon={"user-lock"} // Cambia el icono aquí
-                      color="#0D7C66"
-                      size={16}
-                    />
-                    <Text
-                      style={{
-                        marginLeft: 5,
-                        fontSize: 16,
-                        fontWeight: "bold",
-                        color: "#0D7C66",
-                      }}
-                    >
-                      Reservar requisición
-                    </Text>
-                    <TouchableOpacity
-                      style={{
-                        alignItems: "flex-start",
-                        padding: 4,
-                      }}
-                      onPress={() => handleToggleReservada()}
-                    >
-                      <View
-                        style={{
-                          width: 20,
-                          height: 20,
-                          alignItems: "center",
-                          justifyContent: "center",
-                          borderWidth: 1,
-                          borderRadius: 5,
-                          marginLeft: 8,
-                          borderColor: "#0D7C66",
-                        }}
-                      >
-                        <FontAwesomeIcon
-                          icon={reservada ? "square-check" : "square"}
-                          size={15}
-                          color={reservada ? "#0D7C66" : "#0D7C66"}
-                        />
-                      </View>
-                    </TouchableOpacity>
-                  </Block>
-                </>
-              )}
-              <View
-                style={{
-                  justifyContent: "center",
-                  alignItems: "center",
-                  marginVertical: 5,
-                }}
-              >
-                <View style={styles.divider} />
-              </View>
-              <View style={{ flex: 1, padding: 8 }}>
-                <View style={{ marginBottom: 15 }}>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <FontAwesomeIcon
-                      icon="timeline"
-                      size={16}
-                      color="#0D7C66"
-                    />
-                    <Text
-                      style={{
-                        marginLeft: 8,
-                        fontSize: 16,
-                        fontWeight: "bold",
-                        color: "#0D7C66",
-                      }}
-                    >
-                      Estado de requisición
-                    </Text>
-                  </View>
-
-                  <Text
-                    style={{
-                      marginTop: 4,
-                      fontSize: 12,
-                      color: "#6B7280",
-                      textAlign: "center",
-                    }}
-                  >
-                    Seguimiento del proceso desde reserva hasta carga de
-                    requisición
-                  </Text>
-                </View>
-                <TimelineItem
-                  active={true}
-                  color="#2ab1e6"
-                  icon="user-plus"
-                  title="Creada"
-                  usuario={usuarioCreacion}
-                  fecha={fecha}
-                  hora={horaCreacion}
-                />
-                <TimelineItem
-                  active={reservada}
-                  color="#0D7C66"
-                  icon="user-lock"
-                  title="Reservada"
-                  usuario={usuarioReserva || Usuario}
-                  fecha={fechaReserva}
-                  hora={horaReserva}
-                />
-              </View>
             </KeyboardAwareScrollView>
           </View>
-          {numTraslado != 0 ? (
-            <>
+          <View style={{ flex: 1, padding: 8 }}>
+            <View style={{ marginBottom: 15 }}>
               <View
                 style={{
-                  flex: 1,
-                  justifyContent: "center",
+                  flexDirection: "row",
                   alignItems: "center",
-                  borderTopRightRadius: 10,
-                  borderBottomRightRadius: 10,
-                  backgroundColor: "#D9F2EC",
+                  justifyContent: "center",
                 }}
               >
-                <Block
+                <FontAwesomeIcon icon="timeline" size={16} color="#0D7C66" />
+                <Text
                   style={{
-                    width: "100%",
-                    paddingVertical: 8,
+                    marginLeft: 8,
+                    fontSize: 16,
+                    fontWeight: "bold",
+                    color: "#0D7C66",
                   }}
                 >
-                  <Block
-                    style={{
-                      flexDirection: "row",
-                      width: "100%",
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
-                  >
-                    <FontAwesomeIcon
-                      icon={"clipboard-list"} // Cambia el icono aquí
-                      color="#0D7C66"
-                      size={16}
-                    />
-                    <Text
-                      style={{
-                        marginLeft: 5,
-                        fontSize: 16,
-                        fontWeight: "bold",
-                        color: "#0D7C66",
-                      }}
-                    >
-                      Artículos
-                    </Text>
-                  </Block>
-                </Block>
+                  Estado de requisición
+                </Text>
+              </View>
 
-                <View style={{ flex: 1, width: "100%", paddingHorizontal: 8 }}>
-                  {renderSearch()}
-                  <Block
-                    style={{
-                      flex: 1,
-                      width: "100%",
-                      justifyContent: "flex-start",
-                      overflow: "hidden",
-                    }}
-                  >
-                    {/* 🔍 HAY RESULTADOS DE BÚSQUEDA */}
-                    {searchResults.length > 0 ? (
-                      <FlashList
-                        data={searchResults}
-                        ref={flatListRef}
-                        numColumns={1}
-                        renderItem={renderCard}
-                        keyExtractor={(item) => item.Codigo}
-                        showsVerticalScrollIndicator
-                        estimatedItemSize={200}
-                        contentContainerStyle={{ paddingBottom: 10 }}
-                      />
-                    ) : searchText.length > 2 ? (
-                      /* ❌ NO HAY RESULTADOS */
-                      <Block
-                        style={{
-                          alignItems: "center",
-                          justifyContent: "center",
-                          paddingVertical: 16,
-                          paddingHorizontal: 16,
-                          borderRadius: 10,
-                          height: "100%",
-                        }}
-                      >
-                        <Text
-                          style={{
-                            fontSize: 18,
-                            fontWeight: "bold",
-                            textAlign: "center",
-                            color: "#0D7C66",
-                          }}
-                        >
-                          No se encontraron resultados para "{searchText}"
-                        </Text>
-                      </Block>
-                    ) : isLoading ? (
-                      /* ⏳ CARGANDO */
-                      <View
-                        style={{
-                          flex: 1,
-                          justifyContent: "center",
-                          alignItems: "center",
-                        }}
-                      >
-                        <LottieView
-                          autoPlay
-                          source={ReceiveOrder}
-                          style={{ width: 180, height: 180 }}
-                        />
-                      </View>
-                    ) : (
-                      /* 📦 LISTA NORMAL */
-                      <RequisitionCart
-                        details={requisitionDetails}
-                        onToggle={handlePressCheckItem}
-                        showPacking={false}
-                        showCost={true}
-                        showEdit={true}
-                        renderEdit={(item) => (
-                          <View
-                            style={{
-                              flex: 1,
-                              flexDirection: "row",
-                              justifyContent: "flex-end",
-                              gap: 2,
-                            }}
-                          >
-                            <TouchableOpacity
-                              style={{
-                                borderColor: "#007AFF",
-                                borderWidth: 1,
-                                borderRadius: 10,
-                                flexDirection: "row",
-                                paddingVertical: 4,
-                                paddingHorizontal: 8,
-                                justifyContent: "center",
-                                alignItems: "center",
-                              }}
-                              onPress={() => {
-                                setEditar(true);
-                                setModal(true);
-                                setArticle(item);
-                                setCantidad(item.Cantidad);
-                              }}
-                            >
-                              <FontAwesomeIcon
-                                icon={"file-pen"}
-                                color="#007AFF"
-                                size={12}
-                              />
-                              <Text
-                                style={{
-                                  color: "#007AFF",
-                                  marginLeft: 5,
-                                  fontSize: 12,
-                                }}
-                              >
-                                Editar
-                              </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              style={{
-                                borderColor: "red",
-                                borderWidth: 1,
-                                borderRadius: 10,
-                                flexDirection: "row",
-                                padding: 4,
-                                justifyContent: "center",
-                                alignItems: "center",
-                              }}
-                              onPress={() => {
-                                confirmDeleteRequisitionDetail(item.Codigo);
-                              }}
-                            >
-                              <FontAwesomeIcon
-                                icon={"trash-can"}
-                                color="red"
-                                size={12}
-                              />
-                              <Text
-                                style={{
-                                  color: "red",
-                                  marginLeft: 5,
-                                  fontSize: 12,
-                                }}
-                              >
-                                Eliminar
-                              </Text>
-                            </TouchableOpacity>
-                          </View>
-                        )}
-                      />
-                    )}
-                  </Block>
-                </View>
-              </View>
-              <View
+              <Text
                 style={{
-                  flex: 1,
-                  justifyContent: "center",
-                  alignItems: "center",
-                  //backgroundColor: "#8FD4C6",
-                  borderRadius: 10,
-                  marginLeft: 4,
+                  marginTop: 4,
+                  fontSize: 12,
+                  color: "#6B7280",
+                  textAlign: "center",
                 }}
               >
-                <Block
-                  style={{
-                    width: "100%",
-                    paddingVertical: 8,
-                  }}
-                >
-                  <Block
-                    style={{
-                      flexDirection: "row",
-                      width: "100%",
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
-                  >
-                    <FontAwesomeIcon
-                      icon={"cart-arrow-down"} // Cambia el icono aquí
-                      color="#0D7C66"
-                      size={16}
-                    />
-                    <Text
-                      style={{
-                        marginLeft: 5,
-                        fontSize: 16,
-                        fontWeight: "bold",
-                        color: "#0D7C66",
-                      }}
-                    >
-                      Picking
-                    </Text>
-                  </Block>
-                </Block>
-                <Block
-                  style={{
-                    flex: 1,
-                    width: "100%",
-                    justifyContent: "flex-start",
-                    //backgroundColor: "#8FD4C6",
-                    borderBottomLeftRadius: 10,
-                    borderBottomRightRadius: 10,
-                    overflow: "hidden",
-                    paddingRight: 8,
-                  }}
-                >
-                  <View style={{ flex: 1, minHeight: 100 }}>
-                    <RequisitionCart
-                      details={requisitionDetailsChecked}
-                      onToggle={handlePressUncheckItem}
-                      showCost={true}
-                    />
-                  </View>
-                </Block>
-              </View>
-            </>
-          ) : (
-            <View
+                Seguimiento del proceso desde reserva hasta carga de requisición
+              </Text>
+            </View>
+            <TimelineItem
+              active={true}
+              color="#2ab1e6"
+              icon="user-plus"
+              title="Creada"
+              usuario={usuarioCreacion}
+              fecha={fecha}
+              hora={horaCreacion}
+            />
+            <TimelineItem
+              active={reservada}
+              color="#0D7C66"
+              icon="user-lock"
+              title="Reservada"
+              usuario={usuarioReserva || Usuario}
+              fecha={fechaReserva}
+              hora={horaReserva}
+            />
+            <TimelineItem
+              active={enviada}
+              color="#007AFF"
+              icon="paper-plane"
+              title="Enviada"
+              usuario={usuarioEnvia || Usuario}
+              fecha={fechaEnvia}
+              hora={horaEnvia}
+            />
+            <TimelineItem
+              active={recibida}
+              color="#ff8f44"
+              icon="inbox"
+              title="Recibida"
+              usuario={usuarioRecibe}
+              fecha={fechaRecibe}
+              hora={horaRecibe}
+            />
+            <TimelineItem
+              active={trasladada}
+              color="#16A34A"
+              icon="boxes-packing"
+              title="Trasladada"
+              usuario={usuarioCarga}
+              fecha={fechaCarga}
+              hora={horaCarga}
+            />
+          </View>
+          <View
+            style={{
+              flex: 1,
+              justifyContent: "center",
+              alignItems: "center",
+              //backgroundColor: "#8FD4C6",
+              backgroundColor: "#DBEAFE",
+
+              borderRadius: 10,
+              marginLeft: 4,
+            }}
+          >
+            <Block
               style={{
-                flex: 1,
-                justifyContent: "center",
-                alignItems: "center",
-                borderTopRightRadius: 10,
-                borderBottomRightRadius: 10,
-                backgroundColor: "#D9F2EC",
+                width: "100%",
+                paddingVertical: 8,
               }}
             >
               <Block
                 style={{
+                  flexDirection: "row",
                   width: "100%",
-                  paddingVertical: 8,
+                  justifyContent: "center",
+                  alignItems: "center",
                 }}
               >
-                <Block
+                <FontAwesomeIcon
+                  icon={"clipboard-list"} // Cambia el icono aquí
+                  color="#007AFF"
+                  size={16}
+                />
+                <Text
                   style={{
-                    flexDirection: "row",
-                    width: "100%",
-                    justifyContent: "center",
-                    alignItems: "center",
+                    marginLeft: 5,
+                    fontSize: 16,
+                    fontWeight: "bold",
+                    color: "#007AFF",
                   }}
                 >
-                  <FontAwesomeIcon
-                    icon={"clipboard-list"} // Cambia el icono aquí
-                    color="#0D7C66"
-                    size={16}
-                  />
-                  <Text
-                    style={{
-                      marginLeft: 5,
-                      fontSize: 16,
-                      fontWeight: "bold",
-                      color: "#0D7C66",
-                    }}
-                  >
-                    Artículos
-                  </Text>
-                </Block>
+                  Packing
+                </Text>
               </Block>
-              <View style={{ flex: 1, width: "100%", paddingHorizontal: 8 }}>
-                <Block
-                  style={{
-                    flex: 1,
-                    width: "100%",
-                    justifyContent: "flex-start",
-                    overflow: "hidden",
-                  }}
-                >
-                  <Block
+            </Block>
+            <View style={{ flex: 1, width: "100%", paddingHorizontal: 8 }}>
+              {renderScanner()}
+              <Block
+                style={{
+                  flex: 1,
+                  width: "100%",
+                  justifyContent: "flex-start",
+                  overflow: "hidden",
+                }}
+              >
+                {isLoading ? (
+                  /* ⏳ CARGANDO */
+                  <View
                     style={{
-                      alignItems: "center",
+                      flex: 1,
                       justifyContent: "center",
-                      paddingVertical: 16,
-                      paddingHorizontal: 16,
-                      borderRadius: 10,
-                      height: "100%",
+                      alignItems: "center",
                     }}
                   >
                     <LottieView
                       autoPlay
-                      source={EmptyCart}
+                      source={ScanSuccessfull}
                       style={{ width: 180, height: 180 }}
                     />
-                    <Text
-                      style={{
-                        fontSize: 18,
-                        fontWeight: "bold",
-                        textAlign: "center",
-                        color: "#0D7C66",
-                      }}
-                    >
-                      Guarda la requisicón para poder agregar artículos
-                    </Text>
-                  </Block>
-                </Block>
-              </View>
+                  </View>
+                ) : (
+                  /* 📦 LISTA NORMAL */
+                  <RequisitionCart
+                    details={requisitionDetailsPacked}
+                    onToggle={null}
+                    showPacking={true}
+                    showPackingEnv={false}
+                    showCheckBox={false}
+                    showCost={true}
+                    showEdit={recibida ? false : true}
+                    renderEdit={(item) => (
+                      <View
+                        style={{
+                          flex: 0.5,
+                          flexDirection: "row",
+                          justifyContent: "flex-end",
+                          gap: 2,
+                        }}
+                      >
+                        <TouchableOpacity
+                          style={{
+                            borderColor: "red",
+                            borderWidth: 1,
+                            borderRadius: 10,
+                            flexDirection: "row",
+                            padding: 4,
+                            justifyContent: "center",
+                            alignItems: "center",
+                          }}
+                          onPress={() => {
+                            confirmDeleteRequisitionDetail(item.Codigo);
+                          }}
+                        >
+                          <FontAwesomeIcon
+                            icon={"trash-can"}
+                            color="red"
+                            size={12}
+                          />
+                          <Text
+                            style={{
+                              color: "red",
+                              marginLeft: 5,
+                              fontSize: 12,
+                            }}
+                          >
+                            Eliminar
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  />
+                )}
+              </Block>
             </View>
-          )}
+          </View>
         </View>
       </View>
-
       <BlurView
         intensity={80}
         tint="light"
@@ -1625,32 +1501,30 @@ const NewPickingRequisition = () => {
           borderColor: "rgba(255,255,255,0.3)",
         }}
       >
-        {numTraslado != 0 && (
-          <TouchableOpacity
+        <TouchableOpacity
+          style={{
+            flexDirection: "row",
+            padding: 12,
+            backgroundColor: "#25D366",
+            borderRadius: 20,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+          onPress={() => cargarInformacion()}
+        >
+          <FontAwesomeIcon icon={"retweet"} size={14} color="white" />
+          <Text
             style={{
-              flexDirection: "row",
-              padding: 12,
-              backgroundColor: "#25D366",
-              borderRadius: 20,
-              justifyContent: "center",
-              alignItems: "center",
+              color: "white",
+              fontSize: 14,
+              marginLeft: 5,
             }}
-            onPress={() => cargarInformacion()}
           >
-            <FontAwesomeIcon icon={"retweet"} size={14} color="white" />
-            <Text
-              style={{
-                color: "white",
-                fontSize: 14,
-                marginLeft: 5,
-              }}
-            >
-              recargar
-            </Text>
-          </TouchableOpacity>
-        )}
+            recargar
+          </Text>
+        </TouchableOpacity>
 
-        {numTraslado != 0 ? (
+        {!enviada && (
           <TouchableOpacity
             style={{
               flexDirection: "row",
@@ -1670,35 +1544,84 @@ const NewPickingRequisition = () => {
                 marginLeft: 5,
               }}
             >
-              {isMovil && !isLandscape ? "Guardar" : "Guardar requisición"}
-            </Text>
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={{
-              flexDirection: "row",
-              padding: 12,
-              backgroundColor: "#0D7C66",
-              borderRadius: 20,
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-            onPress={() => handlePressCreateRequisition()}
-          >
-            <FontAwesomeIcon icon={"floppy-disk"} size={14} color="white" />
-            <Text
-              style={{
-                color: "white",
-                fontSize: 14,
-                marginLeft: 5,
-              }}
-            >
-              {isMovil && !isLandscape ? "Crear" : "Crear requisición"}
+              Guardar
             </Text>
           </TouchableOpacity>
         )}
-      </BlurView>
 
+        {Permisos.Transferir &&
+          packingChecked &&
+          (recibida ? (
+            SuperAdmin &&
+            !trasladada && (
+              <TouchableOpacity
+                style={{
+                  flexDirection: "row",
+                  padding: 12,
+                  backgroundColor: "#D92D20",
+                  borderRadius: 20,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  borderWidth: 0.5,
+                  borderColor: "#D92D20",
+                }}
+                onPress={() =>
+                  isLoading ? null : handlePressRevertReceiveStatus()
+                }
+              >
+                {isLoading ? (
+                  <ActivityIndicator size="small" color="white" />
+                ) : (
+                  <>
+                    <FontAwesomeIcon
+                      icon={faArrowRotateLeft}
+                      size={14}
+                      color="#FDECEC"
+                    />
+                    <Text
+                      style={{
+                        color: "#FDECEC",
+                        fontSize: 14,
+                        marginLeft: 5,
+                      }}
+                    >
+                      Revertir
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )
+          ) : (
+            <TouchableOpacity
+              style={{
+                flexDirection: "row",
+                padding: 12,
+                backgroundColor: "#007AFF",
+                borderRadius: 20,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+              onPress={() => (isLoading ? null : handlePressSendPacking())}
+            >
+              {isLoading ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <>
+                  <FontAwesomeIcon icon={faInbox} size={14} color="white" />
+                  <Text
+                    style={{
+                      color: "white",
+                      fontSize: 14,
+                      marginLeft: 5,
+                    }}
+                  >
+                    Recibir
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          ))}
+      </BlurView>
       <Modals
         visible={modal}
         onClose={() => {
@@ -2323,4 +2246,4 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
 });
-export default NewPickingRequisition;
+export default PackingReceiveRequisition;

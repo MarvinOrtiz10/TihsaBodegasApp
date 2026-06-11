@@ -3,7 +3,7 @@ import { Dimensions, Text, View } from "react-native";
 import { BarChart } from "react-native-gifted-charts";
 const { width, height } = Dimensions.get("screen");
 import { BlurView } from "expo-blur";
-const isMovil = width < 650 ? true : false;
+const isMovil = Math.min(width, height) < 650 ? true : false;
 
 const DynamicBarChart = ({ data }) => {
   // Calcular el valor máximo de los datos

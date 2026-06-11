@@ -78,8 +78,8 @@ export const api = createApi({
       ],
     }),
     getAllArticles: builder.query({
-      query: ({codEmp, codBodega}) => `PuntoVenta/SelectArticulosBodega/${codEmp}/${codBodega}`,
-      keepUnusedDataFor: 86400,
+      query: ({codBodega}) => `AppBodegas/Articles/${codBodega}`,
+      keepUnusedDataFor: 0,
       providesTags: (result, error, codEmp) => [
         { type: "Articles", id: codEmp },
       ],

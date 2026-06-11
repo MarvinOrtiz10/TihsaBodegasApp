@@ -2,18 +2,24 @@ import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import Header from "../../components/Header.js";
 import { useSelector, useDispatch } from "react-redux";
 import {
-  StyleSheet,
+  ActivityIndicator,
   Dimensions,
   ImageBackground,
-  Linking,
+  InteractionManager,
   Platform,
   StatusBar,
+  StyleSheet,
+  TextInput,
   TouchableOpacity,
+  Vibration,
   View,
+  useWindowDimensions,
 } from "react-native";
 import argonTheme from "../../constants/Theme.js";
 import { Block, Text, theme } from "galio-framework";
 const { width, height } = Dimensions.get("screen");
+const isMovil = Math.min(width, height) < 650 ? true : false;
+
 import axios from "axios";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Input } from "../../components/index.js";
@@ -23,6 +29,8 @@ import ToastNotification from "../../components/ToastNotification.js";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import LottieView from "lottie-react-native";
 import ReceiveOrder from "../../assets/animations/Receive-order.json";
+import PickingArticle from "../../assets/animations/picking.json";
+import ScanSuccessfull from "../../assets/animations/scan-successfull.json";
 import {
   Requisition,
   UpdateRequisitionPicking,
@@ -37,28 +45,37 @@ import RenderEditArticle from "../Articles/EditArticle.js";
 import RenderViewArticle from "../Articles/ViewArticle.js";
 import Modals from "../../components/Modals.js";
 import CardArticle from "../../components/CardArticle.js";
-import { TouchableWithoutFeedback } from "react-native-web";
 import {
   preprocessDataOnce,
   searchEngineAdvance,
 } from "../Features/Helpers/SearchEngine.js";
 import { FlashList } from "@shopify/flash-list";
 import { Alert } from "react-native";
+import InputSpinner from "react-native-input-spinner";
+import {
+  faArrowRotateLeft,
+  faPaperPlane,
+} from "@fortawesome/free-solid-svg-icons";
+import TimelineItem from "../../components/Timeline.js";
 
-//Variable para identificar el tamaño del dispositivo del cual se está accediendo al app
-const isMovil = width < 650 ? true : false;
 //Variable para identificar el sistema operativo del dispositivo del cual se está accediendo al app
 const Iphone = Platform.OS === "ios" ? true : false;
 const paddingTopNotification = Iphone ? 55 : 40;
 const BACKGROUND_KEY = "app_background";
 
 const PickingRequisition = () => {
+  const { width, height } = useWindowDimensions();
+  const isMovil = Math.min(width, height) < 650;
+  const isLandscape = width > height;
+
   const route = useRoute();
   const { order } = route.params;
   const userState = useSelector((state) => state.user);
   const codEmp = userState.length !== 0 ? userState[0].CodEmp : 1;
   const codBodega = userState.length !== 0 ? userState[0].CodBodega : 1;
   const Usuario = userState.length !== 0 ? userState[0].Usuario : "Sin usuario";
+  const Permisos = userState.length !== 0 ? userState[0].Permisos : false;
+  const SuperAdmin = userState.length !== 0 ? userState[0].SuperAdmin : false;
   const baseUrl = Requisition.EndPoint;
   const baseUrlUpdatePicking = UpdateRequisitionPicking.EndPoint;
   const baseUrlArticles = Articles.EndPoint;
@@ -83,11 +100,25 @@ const PickingRequisition = () => {
   const [codBodegaOrigen, setCodBodegaOrigen] = useState(0);
   const [codBodegaDestino, setCodBodegaDestino] = useState(0);
   const [fecha, setFecha] = useState(null);
+  const [horaCreacion, setHoraCreacion] = useState(null);
   const [fechaReserva, setFechaReserva] = useState(null);
+  const [horaReserva, setHoraReserva] = useState(null);
   const [usuarioReserva, setUsuarioReserva] = useState("");
   const [reservada, setReservada] = useState(false);
   const [observaciones, setObservaciones] = useState("");
   const [usuarioCreacion, setUsuarioCreacion] = useState("");
+  const [enviada, setEnviada] = useState(false);
+  const [usuarioEnvia, setUsuarioEnvia] = useState("");
+  const [fechaEnvia, setFechaEnvia] = useState("");
+  const [horaEnvia, setHoraEnvia] = useState("");
+  const [recibida, setRecibida] = useState(false);
+  const [usuarioRecibe, setUsuarioRecibe] = useState("");
+  const [fechaRecibe, setFechaRecibe] = useState("");
+  const [horaRecibe, setHoraRecibe] = useState("");
+  const [trasladada, setTrasladada] = useState(false);
+  const [usuarioCarga, setUsuarioCarga] = useState("");
+  const [fechaCarga, setFechaCarga] = useState(null);
+  const [horaCarga, setHoraCarga] = useState(null);
   const [editar, setEditar] = useState(false);
   const [modal, setModal] = useState(false);
   /*Variables para agregar o editar artículos*/
@@ -105,19 +136,33 @@ const PickingRequisition = () => {
 
   const observacionesRef = useRef(null);
   const [backgroundImage, setBackgroundImage] = useState(
-    Images.BackgroundDetalle
+    Images.BackgroundDetalle,
   );
   const [requisitionDetails, setRequisitionDetails] = useState([]);
   const [requisitionDetailsCopy, setRequisitionsDetailsCopy] = useState([]);
   const [requisitionDetailsChecked, setRequisitionDetailsChecked] = useState(
-    []
+    [],
   );
-  //Variables para confiración de código
+  const [requisitionDetailsPacked, setRequisitionDetailsPacked] = useState([]);
   const [searchText, setSearchText] = useState("");
+  const [scannedText, setScannedText] = useState("");
   const [dataArticles, setDataArticles] = useState([]);
   const [showClearIcon, setShowClearIcon] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
+  const [cantidadPl, setCantidadPl] = useState(1);
+  const [packingChecked, setPackingChecked] = useState(false);
   const flatListRef = useRef(null);
+  const scanBarRef = useRef(null);
+  const hasArticulos = requisitionDetails.length > 0;
+  const hasPicking = requisitionDetailsChecked.length > 0;
+  const hasPacked = requisitionDetailsPacked.length > 0;
+
+  // reglas finales
+  const showArticulos =
+    hasArticulos || (!hasArticulos && !hasPicking && !hasPacked);
+  const showPicking = true;
+  const showPacking = !hasArticulos;
+  const disabledChangeBodegaOrigen = hasArticulos || hasPicking || hasPacked;
 
   const loadBackground = async () => {
     try {
@@ -142,7 +187,7 @@ const PickingRequisition = () => {
       Number(day),
       Number(hh),
       Number(mm),
-      Number(ss)
+      Number(ss),
     );
 
     return isNaN(date.getTime()) ? null : date;
@@ -167,33 +212,95 @@ const PickingRequisition = () => {
       //Carga los artículos de la bodega de origen
       cargarArticulos(data.CodBodegaOrigen.value);
       setDestino(data.Destino);
-      setFecha(parseFechaApi(data.Fecha) ?? new Date());
-      setFechaReserva(parseFechaApi(data.FechaReserva));
+      const fechaCreacionParse = parseFechaApi(data.Fecha) ?? new Date();
+      setFecha(fechaCreacionParse);
+      if (fechaCreacionParse) {
+        setHoraCreacion(
+          fechaCreacionParse.toLocaleTimeString("es-GT", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit", // opcional
+          }),
+        );
+      }
+      const fechaReservaParse = parseFechaApi(data.FechaReserva);
+      setFechaReserva(fechaReservaParse);
+      if (fechaReservaParse) {
+        setHoraReserva(
+          fechaReservaParse.toLocaleTimeString("es-GT", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit", // opcional
+          }),
+        );
+      }
       setObservaciones(data.Observaciones);
       setReservada(data.Reservado);
       setUsuarioReserva(data.UsuarioReserva);
       setUsuarioCreacion(data.Usuario);
+      setEnviada(data.Enviada);
+      setUsuarioEnvia(data.UsuarioEnvia);
+      setFechaEnvia(data.FechaEnvia);
+      setHoraEnvia(data.HoraEnvia);
+      setRecibida(data.Entregada);
+      setUsuarioRecibe(data.UsuarioRecibe);
+      setFechaRecibe(data.FechaRecibe);
+      setHoraRecibe(data.HoraRecibe);
+      setTrasladada(data.Trasladada);
+      setUsuarioCarga(data.UsuarioCarga);
+      const fechaCargaParse = parseFechaApi(data.FechaCarga);
+      setFechaCarga(fechaCargaParse);
+      if (fechaCargaParse) {
+        setHoraCarga(
+          fechaCargaParse.toLocaleTimeString("es-GT", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit", // opcional
+          }),
+        );
+      }
+      setFechaCarga(data.FechaCarga);
       // 🔹 FILTRO DE DETALLES POR PICKING
       const detalles = data.DetalleRequisicion ?? [];
       const detallesChecked = [];
       const detallesPendientes = [];
-
+      const detallesPacked = [];
       for (const item of detalles) {
         if (item.Picking === true) {
-          detallesChecked.push(item);
+          if (item.CantidadEnv == 0) {
+            detallesChecked.push(item);
+          } else {
+            detallesPacked.push(item);
+          }
         } else {
           detallesPendientes.push(item);
         }
       }
       setRequisitionDetails(detallesPendientes);
       setRequisitionDetailsChecked(detallesChecked);
+      setRequisitionDetailsPacked(detallesPacked);
       setRequisitionsDetailsCopy(detalles);
     }
   }, [infoRequisition]);
-
+  
   const requisitionCodes = useMemo(() => {
-  return new Set(requisitionDetails.map(i => i.Codigo));
-}, [requisitionDetails]);
+    return new Set(requisitionDetails.map((i) => i.Codigo));
+  }, [requisitionDetails]);
+  useEffect(() => {
+    if (
+      requisitionDetails.length !== 0 ||
+      requisitionDetailsChecked.length !== 0
+    ) {
+      setPackingChecked(false);
+      return;
+    }
+
+    const completed = requisitionDetailsPacked.every(
+      (item) => Number(item.Cantidad) === Number(item.CantidadEnv),
+    );
+
+    setPackingChecked(completed);
+  }, [requisitionDetailsPacked, requisitionDetailsChecked]);
 
   const cargarInformacion = () => {
     setIsLoading(true);
@@ -226,7 +333,7 @@ const PickingRequisition = () => {
         back
         onBackPress={handlePressBack}
         scrollTittle={false}
-        title={"PICKING DE REQUISICION"}
+        title={"PICKING y PACKING DE REQUISICION"}
         blur
       />
     );
@@ -262,33 +369,285 @@ const PickingRequisition = () => {
       />
     );
   };
+  //Función para mostrar la barra de escaneo de cada página
+  const renderScanner = () => {
+    return (
+      <View
+        style={{
+          height: 58,
+          paddingHorizontal: 5,
+          alignItems: "center",
+          flexDirection: "row",
+        }}
+      >
+        <View style={styles.searchContainer}>
+          <TextInput
+            right
+            color="black"
+            style={{
+              flex: 1,
+              padding: 10,
+              fontSize: 16,
+              color: "black",
+            }}
+            value={scannedText}
+            placeholder={"Escanear artículos"}
+            placeholderTextColor="#8898AA"
+            onChange={setScannedText}
+            onSubmitEditing={scanArticleByCode}
+            ref={scanBarRef}
+            autoFocus
+          />
+
+          {scannedText ? (
+            <TouchableOpacity
+              onPress={setScannedText("")}
+              style={scannedText && styles.circleCloseButton}
+            >
+              <FontAwesomeIcon name={"xmark"} size={16} color={"#666666"} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              onPress={() => setModal(true)}
+              style={scannedText && styles.circleCloseButton}
+            >
+              <FontAwesomeIcon
+                size={16}
+                color={theme.COLORS.MUTED}
+                icon={"barcode"}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+        <View
+          style={{
+            width: 90,
+            height: 45,
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: "white",
+            borderRadius: 5,
+            marginLeft: 5,
+          }}
+        >
+          <InputSpinner
+            min={0}
+            value={cantidadPl}
+            onChange={(num) => setCantidadPl(num)}
+            onBlur={() => {
+              if (!cantidadPl || cantidadPl === 0) {
+                setCantidadPl(1);
+              }
+            }}
+            skin="default"
+            shadow={false}
+            showBorder={false}
+            rounded={false}
+            height={45}
+            buttonStyle={{
+              width: 30,
+              height: 45,
+              borderRadius: 5,
+              padding: 0,
+              margin: 0,
+              backgroundColor: "#007AFF",
+            }}
+            buttonTextStyle={{
+              fontSize: 18,
+              fontWeight: "600",
+            }}
+            inputStyle={{
+              height: 45,
+              fontSize: 12,
+              textAlign: "center",
+            }}
+            iconSize={8}
+            returnKeyType="done"
+          />
+        </View>
+      </View>
+    );
+  };
   const handleSearch = (text) => {
-  setSearchText(text);
-  setShowClearIcon(text.length > 0);
+    setSearchText(text);
+    setShowClearIcon(text.length > 0);
 
-  if (text.length <= 2) {
-    setSearchResults([]);
-    return;
-  }
+    if (text.length <= 2) {
+      setSearchResults([]);
+      return;
+    }
 
-  const dataFuse = searchEngineAdvance(
-    dataArticles,
-    text,
-    "CodTarticulo",
-    "asc"
-  );
+    const dataFuse = searchEngineAdvance(
+      dataArticles,
+      text,
+      "CodTarticulo",
+      "asc",
+    );
 
-  const results = dataFuse.map(item => ({
-    ...item,
-    AlreadyAdded: requisitionCodes.has(item.Codigo),
-  }));
+    const results = dataFuse.map((item) => ({
+      ...item,
+      AlreadyAdded: requisitionCodes.has(item.Codigo),
+    }));
 
-  setSearchResults(results);
+    setSearchResults(results);
 
-  flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
-};
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+  };
+  const refocusScan = () => {
+    InteractionManager.runAfterInteractions(() => {
+      scanBarRef.current?.focus();
+    });
+  };
+  const scanArticleByCode = async (event) => {
+    if (enviada) {
+      return;
+    }
+    const scannedValue = event.nativeEvent.text?.toUpperCase();
 
+    if (!scannedValue) {
+      refocusScan();
+      return;
+    }
 
+    try {
+      let indexChecked = requisitionDetailsChecked.findIndex((item) => {
+        const codigo = String(item.Codigo).trim().toUpperCase();
+        const codigo2 = String(item.Codigo2).trim().toUpperCase();
+        return codigo === scannedValue || codigo2 === scannedValue;
+      });
+
+      let indexPacked = requisitionDetailsPacked.findIndex((item) => {
+        const codigo = String(item.Codigo).trim().toUpperCase();
+        const codigo2 = String(item.Codigo2).trim().toUpperCase();
+        return codigo === scannedValue || codigo2 === scannedValue;
+      });
+
+      if (indexChecked === -1 && indexPacked === -1) {
+        notificar(
+          "top",
+          "No se ha encontrado el código escaneado",
+          "error",
+          paddingTopNotification,
+        );
+        return;
+      }
+
+      if (cantidadPl === 0) {
+        notificar(
+          "top",
+          "La cantidad de packing no puede ser cero",
+          "error",
+          paddingTopNotification,
+        );
+        return;
+      }
+      setIsLoading(true);
+      // 🔥 CASO 1: PACKED
+      if (indexPacked !== -1) {
+        const article = requisitionDetailsPacked[indexPacked];
+
+        if ((article.CantidadEnv || 0) + cantidadPl > article.Cantidad) {
+          notificar(
+            "top",
+            `La cantidad de packing excede para el artículo ${article.Codigo}`,
+            "error",
+            paddingTopNotification,
+          );
+          return;
+        }
+
+        const data = {
+          CodEmp: codEmp,
+          NumTraslado: numTraslado,
+          Codigo: article.Codigo,
+          CantidadEnv: cantidadPl,
+        };
+
+        const response = await axios.put(
+          `${baseUrl}/Envio/Cantidad/${numTraslado}`,
+          data,
+          { headers: { "content-type": "application/json" } },
+        );
+
+        const { Error, Mensaje, Data } = response.data;
+
+        if (Error === 0) {
+          notificar("top", Mensaje, "success", paddingTopNotification);
+
+          setRequisitionDetailsPacked((prev) =>
+            prev.map((item, i) =>
+              i === indexPacked
+                ? { ...item, CantidadEnv: Data.CantidadEnv }
+                : item,
+            ),
+          );
+        } else {
+          notificar("top", Mensaje, "error", paddingTopNotification);
+        }
+      }
+
+      // 🔥 CASO 2: CHECKED → PACKED
+      else {
+        const article = requisitionDetailsChecked[indexChecked];
+
+        if (cantidadPl > article.Cantidad) {
+          notificar(
+            "top",
+            `La cantidad de packing excede para el artículo ${article.Codigo}`,
+            "error",
+            paddingTopNotification,
+          );
+          return;
+        }
+
+        const data = {
+          CodEmp: codEmp,
+          NumTraslado: numTraslado,
+          Codigo: article.Codigo,
+          CantidadEnv: cantidadPl,
+        };
+
+        const response = await axios.put(
+          `${baseUrl}/Envio/Cantidad/${numTraslado}`,
+          data,
+          { headers: { "content-type": "application/json" } },
+        );
+
+        const { Error, Mensaje, Data } = response.data;
+
+        if (Error === 0) {
+          notificar("top", Mensaje, "success", paddingTopNotification);
+
+          setRequisitionDetailsChecked((prev) =>
+            prev.filter((_, i) => i !== indexChecked),
+          );
+
+          setRequisitionDetailsPacked((prev) => [
+            ...prev,
+            {
+              ...article,
+              CantidadEnv: Data.CantidadEnv,
+            },
+          ]);
+        } else {
+          notificar("top", Mensaje, "error", paddingTopNotification);
+        }
+      }
+
+      setCantidadPl(1);
+    } catch (error) {
+      notificar(
+        "top",
+        "Error al procesar el escaneo",
+        "error",
+        paddingTopNotification,
+      );
+    } finally {
+      setCantidadPl(1);
+      setIsLoading(false);
+      refocusScan();
+    }
+  };
   const handleClear = () => {
     setSearchText("");
     setShowClearIcon(false);
@@ -335,6 +694,7 @@ const PickingRequisition = () => {
         numTraslado: order,
         Codigo: ArticleCode,
         Cantidad: item.Cantidad,
+        CantidadPicking: item.Cantidad,
         Picking: true,
       };
 
@@ -377,10 +737,12 @@ const PickingRequisition = () => {
         "top",
         "Error al actualizar el picking",
         "error",
-        paddingTopNotification
+        paddingTopNotification,
       );
     } finally {
+      setTimeout(() => {
       setIsLoading(false);
+      }, 300);
     }
   }, []);
 
@@ -394,6 +756,7 @@ const PickingRequisition = () => {
         numTraslado: order,
         Codigo: ArticleCode,
         Cantidad: item.Cantidad,
+        CantidadPicking: item.Cantidad,
         Picking: false,
       };
       const response = await axios.put(baseUrlUpdatePicking, data, {
@@ -435,29 +798,50 @@ const PickingRequisition = () => {
         "top",
         "Error al actualizar el picking",
         "error",
-        paddingTopNotification
+        paddingTopNotification,
       );
     } finally {
+      setTimeout(() => {
       setIsLoading(false);
+      }, 300);
     }
   }, []);
-  const handleToggleReservada = () => {
-    if (!reservada) {
-      // pasa de false → true
-      setUsuarioReserva(Usuario);
-      setFechaReserva(new Date());
-    } else {
-      // pasa de true → false
-      setUsuarioReserva(null);
-      setFechaReserva(null);
-    }
+  const handleToggleReservada = async () => {
+    // pasa de false → true
+    // 🔥 PUT al API (misma URL, método distinto)
+    const response = await axios.put(
+      `${baseUrl}/Reservar/${numTraslado}/${Usuario}/${!reservada}`,
+      {
+        headers: { "content-type": "application/json" },
+      },
+    );
 
-    setReservada(!reservada);
+    const respuesta = response.data;
+
+    if (respuesta.Error === 0) {
+      notificar("top", respuesta.Mensaje, "success", paddingTopNotification);
+      const respuesta2 = respuesta.Data;
+      setReservada(respuesta2.Reservado);
+      setUsuarioReserva(respuesta2.Usuario);
+      const fechaReservaParse = parseFechaApi(respuesta2.FechaReserva);
+      setFechaReserva(fechaReservaParse);
+      if (fechaReservaParse) {
+        setHoraReserva(
+          fechaReservaParse.toLocaleTimeString("es-GT", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit", // opcional
+          }),
+        );
+      }
+    } else {
+      notificar("top", respuesta.Mensaje, "error", paddingTopNotification);
+    }
   };
 
   const handleEditRequisitionDetail = async () => {
     const articuloExiste = requisitionDetails.find(
-      (item) => item.Codigo === article.Codigo
+      (item) => item.Codigo === article.Codigo,
     );
     if (!articuloExiste) return;
     if (!cantidad || cantidad <= 0) {
@@ -466,18 +850,18 @@ const PickingRequisition = () => {
         "top",
         `No se puede editar el artículo ${article.Codigo} con cantidad a 0`,
         "error",
-        paddingTopNotification
+        paddingTopNotification,
       );
       return;
     }
-     // 🟡 Si ya existe → sumar cantidades
+    // 🟡 Si ya existe → sumar cantidades
     if (articuloExiste) {
       if (cantidad > articuloExiste.Existencia) {
         notificar(
           "top",
           "La cantidad agregada excede la existencia disponible",
           "error",
-          paddingTopNotification
+          paddingTopNotification,
         );
         return;
       }
@@ -512,8 +896,8 @@ const PickingRequisition = () => {
                   ...item,
                   Cantidad: cantidad,
                 }
-              : item
-          )
+              : item,
+          ),
         );
       } else {
         notificar("top", respuesta.Mensaje, "error", paddingTopNotification);
@@ -524,7 +908,7 @@ const PickingRequisition = () => {
         "top",
         "Error al actualizar el picking",
         "error",
-        paddingTopNotification
+        paddingTopNotification,
       );
     } finally {
       setTimeout(() => {
@@ -540,60 +924,60 @@ const PickingRequisition = () => {
   const handleAddRequisitionDetail = async () => {
     try {
       // 🚫 1. No permitir servicios
-    if (article?.Servicio) {
-      notificar(
-        "top",
-        "No se pueden agregar servicios a la requisición",
-        "warning",
-        paddingTopNotification
-      );
-      return;
-    }
-
-    // 🔎 2. Buscar en CHECKED
-    const articuloChecked = requisitionDetailsChecked.find(
-      (item) => item.Codigo === article.Codigo
-    );
-
-    if (articuloChecked) {
-      notificar(
-        "top",
-        "Debe desmarcar el artículo para poder agregar más cantidades",
-        "warning",
-        paddingTopNotification
-      );
-      return;
-    }
-
-    // 🔎 3. Buscar en PENDIENTES
-    const articuloExistente = requisitionDetails.find(
-      (item) => item.Codigo === article.Codigo
-    );
-
-    const existencia = article.Existencia ?? 0;
-
-    // 🟡 Si ya existe → sumar cantidades
-    if (articuloExistente) {
-      const cantidadTotal = articuloExistente.Cantidad + cantidad;
-
-      if (cantidadTotal > existencia) {
+      if (article?.Servicio) {
         notificar(
           "top",
-          "La cantidad agregada excede la existencia disponible",
-          "error",
-          paddingTopNotification
+          "No se pueden agregar servicios a la requisición",
+          "warning",
+          paddingTopNotification,
         );
         return;
       }
-      // ✏️ Editar cantidad
-      handleEditRequisitionDetail();
-      handleClear();
-      return;
-    }
+
+      // 🔎 2. Buscar en CHECKED
+      const articuloChecked = requisitionDetailsChecked.find(
+        (item) => item.Codigo === article.Codigo,
+      );
+
+      if (articuloChecked) {
+        notificar(
+          "top",
+          "Debe desmarcar el artículo para poder agregar más cantidades",
+          "warning",
+          paddingTopNotification,
+        );
+        return;
+      }
+
+      // 🔎 3. Buscar en PENDIENTES
+      const articuloExistente = requisitionDetails.find(
+        (item) => item.Codigo === article.Codigo,
+      );
+
+      const existencia = article.Existencia ?? 0;
+
+      // 🟡 Si ya existe → sumar cantidades
+      if (articuloExistente) {
+        const cantidadTotal = articuloExistente.Cantidad + cantidad;
+
+        if (cantidadTotal > existencia) {
+          notificar(
+            "top",
+            "La cantidad agregada excede la existencia disponible",
+            "error",
+            paddingTopNotification,
+          );
+          return;
+        }
+        // ✏️ Editar cantidad
+        handleEditRequisitionDetail();
+        handleClear();
+        return;
+      }
 
       handleClear();
       setIsLoading(true);
-      
+
       const newArticle = {
         CodEmp: codEmp,
         NumTraslado: order,
@@ -645,103 +1029,124 @@ const PickingRequisition = () => {
         "top",
         "Error al agregar el artículo a la requisición",
         "error",
-        paddingTopNotification
+        paddingTopNotification,
       );
     } finally {
       setIsLoading(false);
     }
   };
-
- const handleDeleteRequisitionDetail = async (codigo) => {
-  try {
-    setIsLoading(true);
-    // 🔥 DELETE al API (NumTraslado + Codigo)
-    const response = await axios.delete(
-      `${baseUrl}/${order}/${codigo}`,
-      {
-        headers: { "content-type": "application/json" },
-      }
+  const confirmDeleteRequisitionDetail = (codigo) => {
+    Alert.alert(
+      "Eliminar artículo",
+      `¿Estás seguro que deseas eliminar el artículo ${codigo} de la requisición?`,
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: () => handleDeleteRequisitionDetail(codigo),
+        },
+      ],
+      { cancelable: true },
     );
-
-    const respuesta = response.data;
-
-    if (respuesta.Error !== 0) {
+  };
+  const handleDeleteRequisitionDetail = async (codigo) => {
+    try {
+      setIsLoading(true);
+      // 🔥 DELETE al API (NumTraslado + Codigo)
+      const response = await axios.delete(`${baseUrl}/${order}/${codigo}`, {
+        headers: { "content-type": "application/json" },
+      });
+      const respuesta = response.data;
+      if (respuesta.Error !== 0) {
+        notificar("top", respuesta.Mensaje, "error", paddingTopNotification);
+        return;
+      }
+      notificar("top", respuesta.Mensaje, "success", paddingTopNotification);
+    } catch (error) {
+      console.error("❌ Error al eliminar artículo:", error);
       notificar(
         "top",
-        respuesta.Mensaje,
+        "Error al eliminar el artículo de la requisición",
         "error",
-        paddingTopNotification
+        paddingTopNotification,
       );
-      return;
+    } finally {
+      cargarInformacion();
+      setTimeout(() => {
+      setIsLoading(false);
+      }, 300);
     }
+  };
 
-    notificar(
-      "top",
-      respuesta.Mensaje,
-      "success",
-      paddingTopNotification
+  const confirmDeleteRequisitionDetailPackingList = (codigo) => {
+    Alert.alert(
+      "Eliminar artículo",
+      `¿Estás seguro que deseas eliminar el packing list del artículo ${codigo} de la requisición?`,
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: () => handleDeleteRequisitionDetailPackingList(codigo),
+        },
+      ],
+      { cancelable: true },
     );
-
-    // 🔁 Eliminar del estado local
-    const detallesActualizados = requisitionDetails
-      .filter((item) => item.Codigo !== codigo)
-      .sort((a, b) => a.Secuencia - b.Secuencia)
-      .map((item, index) => ({
-        ...item,
-        Secuencia: index + 1,
-      }));
-
-    setRequisitionDetails(detallesActualizados);
-
-    // (opcional) sincronizar copia si la usas
-    setRequisitionsDetailsCopy(detallesActualizados);
-  } catch (error) {
-    console.error("❌ Error al eliminar artículo:", error);
-    notificar(
-      "top",
-      "Error al eliminar el artículo de la requisición",
-      "error",
-      paddingTopNotification
-    );
-  } finally {
-    setIsLoading(false);
-  }
-};
-const confirmDeleteRequisitionDetail = (codigo) => {
-  Alert.alert(
-    "Eliminar artículo",
-    `¿Estás seguro que deseas eliminar el artículo ${codigo} de la requisición?`,
-    [
-      {
-        text: "Cancelar",
-        style: "cancel",
-      },
-      {
-        text: "Eliminar",
-        style: "destructive",
-        onPress: () => handleDeleteRequisitionDetail(codigo),
-      },
-    ],
-    { cancelable: true }
-  );
-};
+  };
+  const handleDeleteRequisitionDetailPackingList = async (codigo) => {
+    try {
+      setIsLoading(true);
+      // 🔥 DELETE al API (NumTraslado + Codigo)
+      const response = await axios.delete(
+        `${baseUrl}/Envio/${order}/${codigo}`,
+        {
+          headers: { "content-type": "application/json" },
+        },
+      );
+      const respuesta = response.data;
+      if (respuesta.Error !== 0) {
+        notificar("top", respuesta.Mensaje, "error", paddingTopNotification);
+        return;
+      }
+      notificar("top", respuesta.Mensaje, "success", paddingTopNotification);
+    } catch (error) {
+      console.error("❌ Error al eliminar artículo:", error);
+      notificar(
+        "top",
+        "Error al eliminar el artículo de la requisición",
+        "error",
+        paddingTopNotification,
+      );
+    } finally {
+      cargarInformacion();
+      refocusScan();
+     setTimeout(() => {
+      setIsLoading(false);
+      }, 300);
+    }
+  };
   const renderCard = ({ item }) => (
     <TouchableOpacity
       onPress={() => {
-        if(item.AlreadyAdded){
-          const QuantityInRequisition = requisitionDetails.find(
-            (i) => i.Codigo === item.Codigo
-          )?.Cantidad || 0;
+        if (item.AlreadyAdded) {
+          const QuantityInRequisition =
+            requisitionDetails.find((i) => i.Codigo === item.Codigo)
+              ?.Cantidad || 0;
           setCantidad(QuantityInRequisition);
           setEditar(true);
-        }else{
+        } else {
           setEditar(false);
         }
         setExistenciaArticulo(item.Existencia);
         setArticle(item);
         setModal(true);
-        
-        
       }}
     >
       <Block style={styles.columnProd}>
@@ -765,6 +1170,7 @@ const confirmDeleteRequisitionDetail = (codigo) => {
       const detalles = [
         ...requisitionDetails,
         ...requisitionDetailsChecked,
+        ...requisitionDetailsPacked,
       ].sort((a, b) => a.Secuencia - b.Secuencia);
 
       const dataRequisition = {
@@ -799,22 +1205,80 @@ const confirmDeleteRequisitionDetail = (codigo) => {
         "top",
         "Error al actualizar la requisición",
         "error",
-        paddingTopNotification
+        paddingTopNotification,
       );
     } finally {
+      cargarInformacion();
+      setTimeout(() => {
       setIsLoading(false);
+      }, 300);
     }
   };
-const formatFecha = (date) => {
-  if (!(date instanceof Date) || isNaN(date.getTime())) return "";
-  return date.toLocaleDateString("es-GT"); // 26/01/2026
-};
-const parseDate = (value) => {
-  if (!value) return null;
-  const d = value instanceof Date ? value : new Date(value);
-  return isNaN(d.getTime()) ? null : d;
-};
+  const formatFecha = (date) => {
+    if (!(date instanceof Date) || isNaN(date.getTime())) return "";
+    return date.toLocaleDateString("es-GT"); // 26/01/2026
+  };
+  const parseDate = (value) => {
+    if (!value) return null;
+    const d = value instanceof Date ? value : new Date(value);
+    return isNaN(d.getTime()) ? null : d;
+  };
+  const handlePressSendPacking = async () => {
+    try {
+      setIsLoading(true);
+      const response = await axios.put(
+        `${baseUrl}/Envio/${numTraslado}/${Usuario}`,
+        { headers: { "content-type": "application/json" } },
+      );
 
+      const { Error, Mensaje, Data } = response.data;
+
+      if (Error === 0) {
+        notificar("top", Mensaje, "success", paddingTopNotification);
+      } else {
+        notificar("top", Mensaje, "error", paddingTopNotification);
+      }
+    } catch (error) {
+      notificar(
+        "error",
+        "Ha ocurrido un error al realizar la petición: " + error,
+        paddingTopNotification,
+      );
+    } finally {
+      cargarInformacion();
+      setTimeout(() => {
+      setIsLoading(false);
+      }, 300);
+    }
+  };
+  const handlePressRevertSendStatus = async () => {
+    try {
+      setIsLoading(true);
+      const response = await axios.put(
+        `${baseUrl}/Envio/Revertir/${numTraslado}`,
+        { headers: { "content-type": "application/json" } },
+      );
+
+      const { Error, Mensaje, Data } = response.data;
+
+      if (Error === 0) {
+        notificar("top", Mensaje, "success", paddingTopNotification);
+      } else {
+        notificar("top", Mensaje, "error", paddingTopNotification);
+      }
+    } catch (error) {
+      notificar(
+        "error",
+        "Ha ocurrido un error al realizar la petición: " + error,
+        paddingTopNotification,
+      );
+    } finally {
+      cargarInformacion();
+      setTimeout(() => {
+      setIsLoading(false);
+      }, 300);
+    }
+  };
   return (
     <ImageBackground source={backgroundImage} style={styles.home}>
       <StatusBar
@@ -824,14 +1288,22 @@ const parseDate = (value) => {
         hidden={false}
       />
       {renderHeader()}
-      <View style={{ flex: 1, width: width, backgroundColor: "white" }}>
-        <View style={{ flexDirection: "row", flex: 1, paddingTop: 5 }}>
+      <View style={{ flex: 1, width: "100%", backgroundColor: "white" }}>
+        <View
+          style={{
+            flexDirection: isMovil && !isLandscape ? "column" : "row",
+            flex: 1,
+            paddingTop: 5,
+          }}
+        >
           <View
             style={{
               flex: 1,
               paddingVertical: 8,
               backgroundColor: "#D9F2EC",
               borderTopLeftRadius: 10,
+              borderTopRightRadius: isMovil && !isLandscape ? 10 : 0,
+              marginBottom: isMovil && !isLandscape ? 8 : 0,
             }}
           >
             <Block
@@ -934,7 +1406,7 @@ const parseDate = (value) => {
                 style={{
                   flexDirection: "row",
                   paddingHorizontal: 16,
-                  //paddingTop: isMovil ? 2 : 8,
+                  marginBottom: 8,
                 }}
               >
                 <Block
@@ -947,11 +1419,11 @@ const parseDate = (value) => {
                   <Select2
                     options={optionsBodegas}
                     value={codBodegaOrigen}
-                    setValue={setCodBodegaOrigen}
                     onSelect={handleSelectBodegaOrigen}
                     placeholder="- Bodega origen -"
                     doneText="Aceptar"
                     searchable={true}
+                    disabled={disabledChangeBodegaOrigen}
                   />
                 </Block>
                 <Block
@@ -981,7 +1453,8 @@ const parseDate = (value) => {
                   ref={observacionesRef}
                 />
               </Block>
-
+              {Permisos.Reservar && (
+              <>
               <View
                 style={{
                   justifyContent: "center",
@@ -1001,7 +1474,7 @@ const parseDate = (value) => {
                 }}
               >
                 <FontAwesomeIcon
-                  icon={"user-check"} // Cambia el icono aquí
+                  icon={"user-lock"} // Cambia el icono aquí
                   color="#0D7C66"
                   size={16}
                 />
@@ -1013,26 +1486,19 @@ const parseDate = (value) => {
                     color: "#0D7C66",
                   }}
                 >
-                  Información de reserva
+                  Reservar requisición
                 </Text>
-              </Block>
-
-              <Block style={styles.inputContainer}>
                 <TouchableOpacity
                   style={{
-                    flexDirection: "row",
-                    alignItems: "center",
+                    alignItems: "flex-start",
                     padding: 4,
                   }}
                   onPress={() => handleToggleReservada()}
                 >
-                  <Text size={14} color="black" bold>
-                    Reservada
-                  </Text>
                   <View
                     style={{
-                      width: 25,
-                      height: 25,
+                      width: 20,
+                      height: 20,
                       alignItems: "center",
                       justifyContent: "center",
                       borderWidth: 1,
@@ -1043,222 +1509,297 @@ const parseDate = (value) => {
                   >
                     <FontAwesomeIcon
                       icon={reservada ? "square-check" : "square"}
-                      size={20}
-                      color={reservada ? "#0D7C66" : "#F2F2F2"}
+                      size={15}
+                      color={reservada ? "#0D7C66" : "#0D7C66"}
                     />
                   </View>
                 </TouchableOpacity>
               </Block>
-              {reservada && (
-                <Block
-                  style={[styles.inputContainer, { flexDirection: "row" }]}
-                >
+              </>)}
+              <View
+                style={{
+                  justifyContent: "center",
+                  alignItems: "center",
+                  marginVertical: 5,
+                }}
+              >
+                <View style={styles.divider} />
+              </View>
+              <View style={{ flex: 1, padding: 8 }}>
+                <View style={{ marginBottom: 15 }}>
                   <View
                     style={{
-                      flex: 1,
-                      padding: 4,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                   >
-                    <Text size={14} color="black" bold>
-                      Usuario reserva
+                    <FontAwesomeIcon
+                      icon="timeline"
+                      size={16}
+                      color="#0D7C66"
+                    />
+                    <Text
+                      style={{
+                        marginLeft: 8,
+                        fontSize: 16,
+                        fontWeight: "bold",
+                        color: "#0D7C66",
+                      }}
+                    >
+                      Estado de requisición
                     </Text>
-                    <Text>{usuarioReserva ? usuarioReserva : Usuario}</Text>
                   </View>
-                  <View
+
+                  <Text
                     style={{
-                      flex: 1,
-                      padding: 4,
+                      marginTop: 4,
+                      fontSize: 12,
+                      color: "#6B7280",
+                      textAlign: "center",
                     }}
                   >
-                    <Text size={14} color="black" bold>
-                      Fecha reserva
-                    </Text>
-                    <Text size={14}>
-                      {fechaReserva
-                        ? fechaReserva.toLocaleString("es-GT", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
-                        : "-"}
-                    </Text>
-                  </View>
-                </Block>
-              )}
+                    Seguimiento del proceso desde reserva hasta carga de
+                    requisición
+                  </Text>
+                </View>
+                <TimelineItem
+                  active={true}
+                  color="#2ab1e6"
+                  icon="user-plus"
+                  title="Creada"
+                  usuario={usuarioCreacion}
+                  fecha={fecha}
+                  hora={horaCreacion}
+                />
+                <TimelineItem
+                  active={reservada}
+                  color="#0D7C66"
+                  icon="user-lock"
+                  title="Reservada"
+                  usuario={usuarioReserva || Usuario}
+                  fecha={fechaReserva}
+                  hora={horaReserva}
+                />
+                <TimelineItem
+                  active={enviada}
+                  color="#007AFF"
+                  icon="paper-plane"
+                  title="Enviada"
+                  usuario={usuarioEnvia || Usuario}
+                  fecha={fechaEnvia}
+                  hora={horaEnvia}
+                />
+                <TimelineItem
+                  active={recibida}
+                  color="#ff8f44"
+                  icon="inbox"
+                  title="Recibida"
+                  usuario={usuarioRecibe}
+                  fecha={fechaRecibe}
+                  hora={horaRecibe}
+                />
+                <TimelineItem
+                  active={trasladada}
+                  color="#16A34A"
+                  icon="boxes-packing"
+                  title="Trasladada"
+                  usuario={usuarioCarga}
+                  fecha={fechaCarga}
+                  hora={horaCarga}
+                />
+              </View>
             </KeyboardAwareScrollView>
           </View>
-          <View
-            style={{
-              flex: 1,
-              justifyContent: "center",
-              alignItems: "center",
-              borderTopRightRadius: 10,
-              borderBottomRightRadius: 10,
-              backgroundColor: "#D9F2EC",
-            }}
-          >
-            <Block
+          {showArticulos && (
+            <View
               style={{
-                width: "100%",
-                paddingVertical: 8,
+                flex: 1,
+                justifyContent: "center",
+                alignItems: "center",
+                borderTopRightRadius: 10,
+                borderBottomRightRadius: 10,
+                backgroundColor: "#D9F2EC",
               }}
             >
               <Block
                 style={{
-                  flexDirection: "row",
                   width: "100%",
-                  justifyContent: "center",
-                  alignItems: "center",
+                  paddingVertical: 8,
                 }}
               >
-                <FontAwesomeIcon
-                  icon={"clipboard-list"} // Cambia el icono aquí
-                  color="#0D7C66"
-                  size={16}
-                />
-                <Text
+                <Block
                   style={{
-                    marginLeft: 5,
-                    fontSize: 16,
-                    fontWeight: "bold",
-                    color: "#0D7C66",
+                    flexDirection: "row",
+                    width: "100%",
+                    justifyContent: "center",
+                    alignItems: "center",
                   }}
                 >
-                  Artículos
-                </Text>
-              </Block>
-            </Block>
-
-            <View style={{ flex: 1, width: "100%", paddingHorizontal: 8 }}>
-              {renderSearch()}
-              <Block
-                style={{
-                  flex: 1,
-                  width: "100%",
-                  justifyContent: "flex-start",
-                  overflow: "hidden",
-                }}
-              >
-                {/* 🔍 HAY RESULTADOS DE BÚSQUEDA */}
-                {searchResults.length > 0 ? (
-                  <FlashList
-                    data={searchResults}
-                    ref={flatListRef}
-                    numColumns={1}
-                    renderItem={renderCard}
-                    keyExtractor={(item) => item.Codigo}
-                    showsVerticalScrollIndicator
-                    estimatedItemSize={200}
-                    contentContainerStyle={{ paddingBottom: 10 }}
+                  <FontAwesomeIcon
+                    icon={"clipboard-list"} // Cambia el icono aquí
+                    color="#0D7C66"
+                    size={16}
                   />
-                ) : searchText.length > 2 ? (
-                  /* ❌ NO HAY RESULTADOS */
-                  <Block
+                  <Text
                     style={{
-                      alignItems: "center",
-                      justifyContent: "center",
-                      paddingVertical: 16,
-                      paddingHorizontal: 16,
-                      borderRadius: 10,
-                      height: "100%",
+                      marginLeft: 5,
+                      fontSize: 16,
+                      fontWeight: "bold",
+                      color: "#0D7C66",
                     }}
                   >
-                    <Text
+                    Artículos
+                  </Text>
+                </Block>
+              </Block>
+              <View style={{ flex: 1, width: "100%", paddingHorizontal: 8 }}>
+                {renderSearch()}
+                <Block
+                  style={{
+                    flex: 1,
+                    width: "100%",
+                    justifyContent: "flex-start",
+                    overflow: "hidden",
+                  }}
+                >
+                  {/* 🔍 HAY RESULTADOS DE BÚSQUEDA */}
+                  {searchResults.length > 0 ? (
+                    <FlashList
+                      data={searchResults}
+                      ref={flatListRef}
+                      numColumns={1}
+                      renderItem={renderCard}
+                      keyExtractor={(item) => item.Codigo}
+                      showsVerticalScrollIndicator
+                      estimatedItemSize={200}
+                      contentContainerStyle={{ paddingBottom: 10 }}
+                    />
+                  ) : searchText.length > 2 ? (
+                    /* ❌ NO HAY RESULTADOS */
+                    <Block
                       style={{
-                        fontSize: 18,
-                        fontWeight: "bold",
-                        textAlign: "center",
-                        color: "#0D7C66",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        paddingVertical: 16,
+                        paddingHorizontal: 16,
+                        borderRadius: 10,
+                        height: "100%",
                       }}
                     >
-                      No se encontraron resultados para "{searchText}"
-                    </Text>
-                  </Block>
-                ) : isLoading ? (
-                  /* ⏳ CARGANDO */
-                  <View
-                    style={{
-                      flex: 1,
-                      justifyContent: "center",
-                      alignItems: "center",
-                    }}
-                  >
-                    <LottieView
-                      autoPlay
-                      source={ReceiveOrder}
-                      style={{ width: 180, height: 180 }}
+                      <Text
+                        style={{
+                          fontSize: 18,
+                          fontWeight: "bold",
+                          textAlign: "center",
+                          color: "#0D7C66",
+                        }}
+                      >
+                        No se encontraron resultados para "{searchText}"
+                      </Text>
+                    </Block>
+                  ) : isLoading ? (
+                    /* ⏳ CARGANDO */
+                    <View
+                      style={{
+                        flex: 1,
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    >
+                      <LottieView
+                        autoPlay
+                        source={ReceiveOrder}
+                        style={{ width: 180, height: 180 }}
+                      />
+                    </View>
+                  ) : (
+                    /* 📦 LISTA NORMAL */
+                    <RequisitionCart
+                      details={requisitionDetails}
+                      onToggle={handlePressCheckItem}
+                      showPacking={false}
+                      showCost={true}
+                      showEdit={true}
+                      renderEdit={(item) => (
+                        <View
+                          style={{
+                            flex: 1,
+                            flexDirection: "row",
+                            justifyContent: "flex-end",
+                            gap: 2,
+                          }}
+                        >
+                          <TouchableOpacity
+                            style={{
+                              borderColor: "#007AFF",
+                              borderWidth: 1,
+                              borderRadius: 10,
+                              flexDirection: "row",
+                              paddingVertical: 4,
+                              paddingHorizontal: 8,
+                              justifyContent: "center",
+                              alignItems: "center",
+                            }}
+                            onPress={() => {
+                              setEditar(true);
+                              setModal(true);
+                              setArticle(item);
+                              setCantidad(item.Cantidad);
+                            }}
+                          >
+                            <FontAwesomeIcon
+                              icon={"file-pen"}
+                              color="#007AFF"
+                              size={12}
+                            />
+                            <Text
+                              style={{
+                                color: "#007AFF",
+                                marginLeft: 5,
+                                fontSize: 12,
+                              }}
+                            >
+                              Editar
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={{
+                              borderColor: "red",
+                              borderWidth: 1,
+                              borderRadius: 10,
+                              flexDirection: "row",
+                              padding: 4,
+                              justifyContent: "center",
+                              alignItems: "center",
+                            }}
+                            onPress={() => {
+                              confirmDeleteRequisitionDetail(item.Codigo);
+                            }}
+                          >
+                            <FontAwesomeIcon
+                              icon={"trash-can"}
+                              color="red"
+                              size={12}
+                            />
+                            <Text
+                              style={{
+                                color: "red",
+                                marginLeft: 5,
+                                fontSize: 12,
+                              }}
+                            >
+                              Eliminar
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
                     />
-                  </View>
-                ) : (
-                  /* 📦 LISTA NORMAL */
-                  <RequisitionCart
-                    details={requisitionDetails}
-                    onToggle={handlePressCheckItem}
-                    showPacking={false}
-                    showCost={true}
-                    showEdit={true}
-                    renderEdit={(item) => (
-                      <View style={{ flex: 1, flexDirection: "row", justifyContent: "flex-end", gap: 2 }}>
-                        <TouchableOpacity
-                          style={{
-                            borderColor: "#007AFF",
-                            borderWidth: 1,
-                            borderRadius: 10,
-                            flexDirection: "row",
-                            paddingVertical: 4,
-                            paddingHorizontal: 8,
-                            justifyContent: "center",
-                            alignItems: "center",
-                          }}
-                          onPress={() => {
-                            setEditar(true);
-                            setModal(true);
-                            setArticle(item);
-                            setCantidad(item.Cantidad);
-                          }}
-                        >
-                          <FontAwesomeIcon
-                            icon={"file-pen"}
-                            color="#007AFF"
-                            size={12}
-                          />
-                          <Text style={{ color: "#007AFF", marginLeft: 5, fontSize: 12 }}>
-                            Editar
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={{
-                            borderColor: "red",
-                            borderWidth: 1,
-                            borderRadius: 10,
-                            flexDirection: "row",
-                            padding: 4,
-                            justifyContent: "center",
-                            alignItems: "center",
-                          }}
-                          onPress={() => {
-                            confirmDeleteRequisitionDetail(item.Codigo);
-                          }}
-                        >
-                          <FontAwesomeIcon
-                            icon={"trash-can"}
-                            color="red"
-                             size={12}
-                          />
-                          <Text style={{ color: "red", marginLeft: 5, fontSize: 12 }}>
-                            Eliminar
-                          </Text>
-                        </TouchableOpacity>
-                        
-                      </View>
-                    )}
-                  />
-                )}
-              </Block>
+                  )}
+                </Block>
+              </View>
             </View>
-          </View>
+          )}
           <View
             style={{
               flex: 1,
@@ -1284,7 +1825,7 @@ const parseDate = (value) => {
                 }}
               >
                 <FontAwesomeIcon
-                  icon={"cart-arrow-down"} // Cambia el icono aquí
+                  icon={"people-carry-box"} // Cambia el icono aquí
                   color="#0D7C66"
                   size={16}
                 />
@@ -1313,14 +1854,155 @@ const parseDate = (value) => {
               }}
             >
               <View style={{ flex: 1, minHeight: 100 }}>
+                {isLoading ? (
+                    /* ⏳ CARGANDO */
+                    <View
+                      style={{
+                        flex: 1,
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    >
+                      <LottieView
+                        autoPlay
+                        source={PickingArticle}
+                        style={{ width: 180, height: 180 }}
+                      />
+                    </View>
+                  ) : (
                 <RequisitionCart
                   details={requisitionDetailsChecked}
+                  showPicking={false}
                   onToggle={handlePressUncheckItem}
                   showCost={true}
-                />
+                />)}
               </View>
             </Block>
           </View>
+          {showPacking && (
+            <View
+              style={{
+                flex: 1,
+                justifyContent: "center",
+                alignItems: "center",
+                borderRadius: 10,
+                backgroundColor: "#DBEAFE",
+              }}
+            >
+              <Block
+                style={{
+                  width: "100%",
+                  paddingVertical: 8,
+                }}
+              >
+                <Block
+                  style={{
+                    flexDirection: "row",
+                    width: "100%",
+                    justifyContent: "center",
+                    alignItems: "center",
+                  }}
+                >
+                  <FontAwesomeIcon
+                    icon={"clipboard-list"} // Cambia el icono aquí
+                    color="#007AFF"
+                    size={16}
+                  />
+                  <Text
+                    style={{
+                      marginLeft: 5,
+                      fontSize: 16,
+                      fontWeight: "bold",
+                      color: "#007AFF",
+                    }}
+                  >
+                    Packing
+                  </Text>
+                </Block>
+              </Block>
+              <View style={{ flex: 1, width: "100%", paddingHorizontal: 8 }}>
+                {renderScanner()}
+                <Block
+                  style={{
+                    flex: 1,
+                    width: "100%",
+                    justifyContent: "flex-start",
+                    overflow: "hidden",
+                  }}
+                >
+                  {isLoading ? (
+                    /* ⏳ CARGANDO */
+                    <View
+                      style={{
+                        flex: 1,
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    >
+                      <LottieView
+                        autoPlay
+                        source={ScanSuccessfull}
+                        style={{ width: 180, height: 180 }}
+                      />
+                    </View>
+                  ) : (
+                    /* 📦 LISTA NORMAL */
+                    <RequisitionCart
+                      details={requisitionDetailsPacked}
+                      onToggle={null}
+                      showPacking={false}
+                      showPackingEnv={true}
+                      showCheckBox={false}
+                      showCost={true}
+                      showEdit={enviada || recibida ? false : true}
+                      renderEdit={(item) => (
+                        <View
+                          style={{
+                            flex: 0.5,
+                            flexDirection: "row",
+                            justifyContent: "flex-end",
+                            gap: 2,
+                          }}
+                        >
+                          <TouchableOpacity
+                            style={{
+                              borderColor: "red",
+                              borderWidth: 1,
+                              borderRadius: 10,
+                              flexDirection: "row",
+                              padding: 4,
+                              justifyContent: "center",
+                              alignItems: "center",
+                            }}
+                            onPress={() => {
+                              confirmDeleteRequisitionDetailPackingList(
+                                item.Codigo,
+                              );
+                            }}
+                          >
+                            <FontAwesomeIcon
+                              icon={"trash-can"}
+                              color="red"
+                              size={12}
+                            />
+                            <Text
+                              style={{
+                                color: "red",
+                                marginLeft: 5,
+                                fontSize: 12,
+                              }}
+                            >
+                              Eliminar
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    />
+                  )}
+                </Block>
+              </View>
+            </View>
+          )}
         </View>
       </View>
       <View
@@ -1362,28 +2044,108 @@ const parseDate = (value) => {
           right: 16, // Adjust this value to control the distance from the right
         }}
       >
-        <TouchableOpacity
-          style={{
-            flexDirection: "row",
-            padding: 16,
-            backgroundColor: "#0D7C66",
-            borderRadius: 20,
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-          onPress={() => handlePressUpdateRequisition()}
-        >
-          <FontAwesomeIcon icon={"floppy-disk"} size={14} color="white" />
-          <Text
+        {!enviada && (
+          <TouchableOpacity
             style={{
-              color: "white",
-              fontSize: 14,
-              marginLeft: 5,
+              flexDirection: "row",
+              padding: 16,
+              backgroundColor: "#0D7C66",
+              borderRadius: 20,
+              justifyContent: "center",
+              alignItems: "center",
             }}
+            onPress={() => handlePressUpdateRequisition()}
           >
-            Guardar
-          </Text>
-        </TouchableOpacity>
+            <FontAwesomeIcon icon={"floppy-disk"} size={14} color="white" />
+            <Text
+              style={{
+                color: "white",
+                fontSize: 14,
+                marginLeft: 5,
+              }}
+            >
+              Guardar
+            </Text>
+          </TouchableOpacity>
+        )}
+        {Permisos.Transferir &&
+          packingChecked &&
+          (enviada ? (
+            SuperAdmin &&
+            !recibida && (
+              <TouchableOpacity
+                style={{
+                  flexDirection: "row",
+                  padding: 16,
+                  backgroundColor: "#D92D20",
+                  borderRadius: 20,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  marginLeft: 4,
+                  borderWidth: 0.5,
+                  borderColor: "#D92D20",
+                }}
+                onPress={() =>
+                  isLoading ? null : handlePressRevertSendStatus()
+                }
+              >
+                {isLoading ? (
+                  <ActivityIndicator size="large" color="white" />
+                ) : (
+                  <>
+                    <FontAwesomeIcon
+                      icon={faArrowRotateLeft}
+                      size={14}
+                      color="#FDECEC"
+                    />
+                    <Text
+                      style={{
+                        color: "#FDECEC",
+                        fontSize: 14,
+                        marginLeft: 5,
+                      }}
+                    >
+                      Revertir
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )
+          ) : (
+            <TouchableOpacity
+              style={{
+                flexDirection: "row",
+                padding: 16,
+                backgroundColor: "#007AFF",
+                borderRadius: 20,
+                justifyContent: "center",
+                alignItems: "center",
+                marginLeft: 4,
+              }}
+              onPress={() => (isLoading ? null : handlePressSendPacking())}
+            >
+              {isLoading ? (
+                <ActivityIndicator size="large" color="white" />
+              ) : (
+                <>
+                  <FontAwesomeIcon
+                    icon={faPaperPlane}
+                    size={14}
+                    color="white"
+                  />
+                  <Text
+                    style={{
+                      color: "white",
+                      fontSize: 14,
+                      marginLeft: 5,
+                    }}
+                  >
+                    Enviar
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          ))}
       </View>
       <Modals
         visible={modal}
@@ -1448,8 +2210,8 @@ const parseDate = (value) => {
 const styles = StyleSheet.create({
   home: {
     flex: 1,
-    height: height,
-    width: width,
+    height: "100%",
+    width: "100%",
     backgroundColor: "white",
   },
   search: {
@@ -1723,7 +2485,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FED30B",
     borderRadius: 50,
     height: 50,
-    width: width * 0.9,
+    width: "90%",
   },
   textRequestButton: {
     color: "white", //"#00296b",
@@ -1738,7 +2500,7 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: 8,
     padding: 16,
-    width: width - 20,
+    width: "100%"- 20,
     height: 100,
   },
 
@@ -1768,7 +2530,7 @@ const styles = StyleSheet.create({
 
   button: {
     marginBottom: theme.SIZES.BASE,
-    //width: width - theme.SIZES.BASE * 2,
+    //width: "100%"- theme.SIZES.BASE * 2,
   },
   modalHeaderTitle: {
     fontSize: 18,

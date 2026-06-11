@@ -2,7 +2,7 @@ import React, { useCallback } from "react";
 import { FlashList } from "@shopify/flash-list";
 import CartItem from "./CartItem";
 
-const OrderCart = React.memo(({ showPacking, showPicking, orderDetails, onToggle, renderEdit }) => {
+const OrderCart = React.memo(({ showPacking, showPicking, orderDetails, onToggle, renderEdit, isPickingApp }) => {
   const renderItem = useCallback(
     ({ item }) => (
       <CartItem
@@ -13,7 +13,7 @@ const OrderCart = React.memo(({ showPacking, showPicking, orderDetails, onToggle
         showCost={false}
         showEdit={true}
         renderEdit={renderEdit ? renderEdit(item) : null}
-
+        isPickingApp={isPickingApp}
       />
     ),
     [onToggle]

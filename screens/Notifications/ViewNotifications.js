@@ -19,7 +19,7 @@ import { Notifications } from "../../settings/EndPoints.js";
 import useAxiosInstance from "../../settings/AxiosConfig.js";
 import { Images } from "../../constants";
 import { Ionicons } from "@expo/vector-icons";
-const isMovil = width < 650 ? true : false;
+const isMovil = Math.min(width, height) < 650 ? true : false;
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { FlashList } from "@shopify/flash-list";
 import { useRoute } from "@react-navigation/native";
@@ -184,8 +184,8 @@ const ViewNotifications = () => {
 const styles = StyleSheet.create({
   home: {
     flex: 1,
-    height: height,
-    width: width,
+    height: "100%",
+    width: "100%",
     backgroundColor: "white",
   },
   notificationList: {
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
   },
   floatingButton: {
     alignItems: "center",
-    width: width - 40,
+    width: "100%"- 40,
     backgroundColor: "rgba(29, 161, 242, 0.9)",
     paddingHorizontal: 15,
     paddingVertical: 10,

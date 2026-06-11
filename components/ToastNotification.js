@@ -13,7 +13,7 @@ import { BlurView } from "expo-blur";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 const { width, height } = Dimensions.get("screen");
 //Variable para identificar el tamaño del dispositivo del cual se está accediendo al app
-const isMovil = width < 650 ? true : false;
+const isMovil = Math.min(width, height) < 650 ? true : false;
 
 const ToastNotification = forwardRef((props, ref) => {
   const [isToastVisible, setIsToastVisible] = useState(false);
@@ -52,7 +52,8 @@ const ToastNotification = forwardRef((props, ref) => {
   const styles = StyleSheet.create({
     toastContainer: {
       flex: 1,
-      width: width - 16,
+      width: "100%",
+      paddingHorizontal: 8,
       top: 0,
       position: "absolute",
       zIndex: 9999999999999,
@@ -178,7 +179,7 @@ import { PanGestureHandler } from "react-native-gesture-handler";
 import { BlurView } from "expo-blur";
 const { width, height } = Dimensions.get("screen");
 //Variable para identificar el tamaño del dispositivo del cual se está accediendo al app
-const isMovil = width < 650 ? true : false;
+const isMovil = Math.min(width, height) < 650 ? true : false;
 
 const ToastNotification = forwardRef((props, ref) => {
   const [isToastVisible, setIsToastVisible] = useState(false);
@@ -239,7 +240,7 @@ const ToastNotification = forwardRef((props, ref) => {
       justifyContent: "center",
       alignItems: "center",
       height: 80,
-      width: width - 20,
+      width: "100%"- 20,
       alignSelf: "center",
     },
     iconContainer: {

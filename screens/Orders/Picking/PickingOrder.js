@@ -40,13 +40,13 @@ import OrderCart from "../../../components/OrderCart.js";
 import InputSpinner from "react-native-input-spinner";
 
 //Variable para identificar el tamaño del dispositivo del cual se está accediendo al app
-const isMovil = width < 650 ? true : false;
+const isMovil = Math.min(width, height) < 650 ? true : false;
 //Variable para identificar el sistema operativo del dispositivo del cual se está accediendo al app
 const Iphone = Platform.OS === "ios" ? true : false;
 const paddingTopNotification = Iphone ? 55 : 40;
 const BACKGROUND_KEY = "app_background";
 
-const CheckinOrder = () => {
+const PickingOrder = () => {
   const route = useRoute();
   const { order } = route.params;
   const userState = useSelector((state) => state.user);
@@ -128,11 +128,15 @@ const CheckinOrder = () => {
     loadBackground();
   }, []);
   useEffect(() => {
-    if (dataVendedores) {
-      setOptionsVendedor(dataVendedores.Data);
+    if (dataVendedores && dataVendedores.Data) {
+      setOptionsVendedor((prev) => 
+        JSON.stringify(prev) !== JSON.stringify(dataVendedores.Data) ? dataVendedores.Data : prev
+      );
     }
     if (dataFormasPago) {
-      setOptionsFormasPago(dataFormasPago);
+      setOptionsFormasPago((prev) => 
+        JSON.stringify(prev) !== JSON.stringify(dataFormasPago) ? dataFormasPago : prev
+      );
     }
   }, [dataVendedores, dataFormasPago]);
 
@@ -222,7 +226,7 @@ const CheckinOrder = () => {
       toastRef.current.show(position, mensaje, tipo, paddingTop);
     }
   };
-  const handleSelectFormaPago = (value, label) => {
+  const handleSelectFormaPago = useCallback((value, label) => {
     if (value == null) {
       setFormaPago([]);
       setFormaPagoLabel("");
@@ -230,14 +234,14 @@ const CheckinOrder = () => {
       setFormaPago(value);
       setFormaPagoLabel(label);
     }
-  };
-  const handleSelectVendedor = (value) => {
+  }, []);
+  const handleSelectVendedor = useCallback((value) => {
     if (value == null) {
       setVendedor([]);
     } else {
       setVendedor(value);
     }
-  };
+  }, []);
   const obtenerMaxDescuento = (array, valor) => {
     // Buscar el objeto que coincida con el valor dado
     const objetoEncontrado = array.find((item) => item.value === valor);
@@ -526,23 +530,68 @@ const CheckinOrder = () => {
     }
   }, []);
 
-  const handleUpdateQuantity = (Codigo, newQuantity) => {
+  const handleUpdateQuantity = useCallback((Codigo, newQuantity) => {
     if (newQuantity < 1) {
       // No permitir valores menores a 1
       return;
     }
 
-    setOrderDetails((prev) =>
-      prev.map((i) =>
+    setOrderDetails((prev) => {
+      const numValue = Number(newQuantity);
+      // Solo actualiza si el valor realmente cambió para evitar re-renders infinitos
+      const hasChanged = prev.some(i => i.Codigo === Codigo && i.CantidadPicking !== numValue);
+      if (!hasChanged) return prev;
+
+      return prev.map((i) =>
         i.Codigo === Codigo
           ? {
               ...i,
-              CantidadPicking: Number(newQuantity),
+              CantidadPicking: numValue,
             }
           : i,
-      ),
-    );
-  };
+      );
+    });
+  }, []);
+
+  const handleToggleCheckItem = useCallback((item) => {
+    handlePressCheckItem(item.Codigo);
+  }, [handlePressCheckItem]);
+
+  const renderEditSpinner = useCallback((item) => (
+    <View
+      style={{
+        flex: 1,
+        maxWidth: 80,
+        justifyContent: "center",
+      }}
+    >
+      <InputSpinner
+        min={1}
+        max={item.Cantidad}
+        value={item.CantidadPicking}
+        onChange={(num) => handleUpdateQuantity(item.Codigo, num)}
+        skin="default"
+        shadow={false}
+        showBorder={false}
+        rounded={false}
+        height={25}
+        style={{
+          backgroundColor: "white",
+          height: 25,
+          width: 80,
+        }}
+        buttonStyle={{
+          height: 25,
+          width: 25,
+          fontSize: 10,
+          backgroundColor: "#007AFF",
+        }}
+        inputStyle={{ height: 45, fontSize: 12 }}
+        iconSize={8}
+        returnKeyType="done"
+      />
+    </View>
+  ), [handleUpdateQuantity]);
 
   return (
     <ImageBackground source={backgroundImage} style={styles.home}>
@@ -553,7 +602,7 @@ const CheckinOrder = () => {
         hidden={false}
       />
       {renderHeader()}
-      <View style={{ flex: 1, width: width, backgroundColor: "white" }}>
+      <View style={{ flex: 1, width: "100%", backgroundColor: "white" }}>
         <View style={{ flexDirection: "row", flex: 1, paddingTop: 5 }}>
           <View
             style={{
@@ -889,46 +938,11 @@ const CheckinOrder = () => {
                 <OrderCart
                   orderDetails={orderDetails}
                   extraData={orderDetails}
-                  onToggle={(item) => handlePressCheckItem(item.Codigo)}
+                  onToggle={handleToggleCheckItem}
                   showPacking={false}
                   showPicking={false}
-                  renderEdit={(item) => (
-                    <View
-                      style={{
-                        flex: 1,
-                        maxWidth: 80,
-                        justifyContent: "center",
-                      }}
-                    >
-                      <InputSpinner
-                        min={1}
-                        max={item.Cantidad}
-                        value={item.CantidadPicking}
-                        onChange={(num) =>
-                          handleUpdateQuantity(item.Codigo, num)
-                        }
-                        skin="default"
-                        shadow={false}
-                        showBorder={false}
-                        rounded={false}
-                        height={25}
-                        style={{
-                          backgroundColor: "white",
-                          height: 25,
-                          width: 80,
-                        }}
-                        buttonStyle={{
-                          height: 25,
-                          width: 25,
-                          fontSize: 10,
-                          backgroundColor: "#007AFF",
-                        }}
-                        inputStyle={{ height: 45, fontSize: 12 }}
-                        iconSize={8}
-                        returnKeyType="done"
-                      />
-                    </View>
-                  )}
+                  renderEdit={renderEditSpinner}
+                  isPickingApp={true}
                 />
               )}
             </Block>
@@ -991,6 +1005,7 @@ const CheckinOrder = () => {
                   orderDetails={orderDetailsChecked}
                   onToggle={handlePressUncheckItem}
                   showPicking={true}
+                  isPickingApp={true}
                 />
               </View>
             </Block>
@@ -1035,8 +1050,8 @@ const CheckinOrder = () => {
 const styles = StyleSheet.create({
   home: {
     flex: 1,
-    height: height,
-    width: width,
+    height: "100%",
+    width: "100%",
     backgroundColor: "white",
   },
   search: {
@@ -1311,7 +1326,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FED30B",
     borderRadius: 50,
     height: 50,
-    width: width * 0.9,
+    width: "90%",
   },
   textRequestButton: {
     color: "white", //"#00296b",
@@ -1326,7 +1341,7 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: 8,
     padding: 16,
-    width: width - 20,
+    width: "100%"- 20,
     height: 100,
   },
 
@@ -1356,7 +1371,7 @@ const styles = StyleSheet.create({
 
   button: {
     marginBottom: theme.SIZES.BASE,
-    //width: width - theme.SIZES.BASE * 2,
+    //width: "100%"- theme.SIZES.BASE * 2,
   },
   modalHeaderTitle: {
     fontSize: 18,
@@ -1597,4 +1612,4 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
 });
-export default CheckinOrder;
+export default PickingOrder;

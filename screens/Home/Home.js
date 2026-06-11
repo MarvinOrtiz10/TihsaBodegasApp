@@ -13,7 +13,10 @@ import {
   View,
   Linking,
   Alert,
+  ScrollView,
+  useWindowDimensions,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../../components/Header.js";
 const { width, height } = Dimensions.get("screen");
 //import Carousel, { Pagination } from "react-native-snap-carousel";
@@ -35,19 +38,21 @@ import {
   faDollyFlatbed,
   faGears,
   faMagnifyingGlass,
+  faMagnifyingGlassLocation,
   faMobileRetro,
   faMobileScreen,
   faMoneyBillTransfer,
   faPeopleCarryBox,
   faReceipt,
   faTruckFast,
+  faTruckRampBox,
   faUsersLine,
 } from "@fortawesome/free-solid-svg-icons";
 import { AppVersion } from "../../settings/AppSettings.js";
 
 const cardWidth = width - 60;
 //Variable para identificar el tamaño del dispositivo del cual se está accediendo al app
-const isMovil = width < 650 ? true : false;
+const isMovil = Math.min(width, height) < 650 ? true : false;
 //Variable para identificar el sistema operativo del dispositivo del cual se está accediendo al app
 const Iphone = Platform.OS === "ios" ? true : false;
 
@@ -58,12 +63,14 @@ const paddingTopNotification = Iphone ? 55 : 40;
 const Version = AppVersion.Version;
 
 const Home = () => {
+  const { width: currentWidth, height: currentHeight } = useWindowDimensions();
+  const isLandscape = currentWidth > currentHeight;
   const navigation = useNavigation();
   const userState = useSelector((state) => state.user);
   const toastRef = useRef(null);
   const nombre = userState[0].Nombre;
   const [backgroundImage, setBackgroundImage] = useState(
-    Images.BackgroundDetalle
+    Images.BackgroundDetalle,
   );
 
   const loadBackground = async () => {
@@ -79,6 +86,7 @@ const Home = () => {
 
   // Cargar el background guardado al iniciar la app
   useEffect(() => {
+    console.log("Medida de pantalla: ", width, height);
     loadBackground();
   }, []);
 
@@ -128,12 +136,12 @@ const Home = () => {
       show: true,
     },
     {
-      title: "Requisiciones de bodega",
-      subtitle: "Picking de artículos de requisición",
-      icon: faDollyFlatbed,
-      color: "#ff8f44", //"#f4a261",
-      bgColor: "#fef6e6",
-      onPress: () => navigation.navigate("Requisitions"),
+      title: "Ubicaciones Artículos",
+      subtitle: "Visualiza ó cambia ubicaciones",
+      icon: faMagnifyingGlassLocation,
+      color: "#0077b6",
+      bgColor: "#DBEAFE",
+      onPress: () => navigation.navigate("Location Articles"),
       show: true,
     },
 
@@ -141,9 +149,40 @@ const Home = () => {
       title: "Guías de Guatex",
       subtitle: "Crea, edita e imprime guías de Guatex",
       icon: faTruckFast,
-      color: "#0077b6",
-      bgColor: "#DBEAFE",
-      onPress: () => {notificar("top", "Opción estará disponible próximamente", "info", paddingTopNotification);},
+      //color: "#0077b6",
+      //bgColor: "#DBEAFE",
+      color: "#5eaaa8",
+      bgColor: "#e6f9f8",
+      onPress: () => {
+        notificar(
+          "top",
+          "Opción estará disponible próximamente",
+          "info",
+          paddingTopNotification,
+        );
+      },
+      show: true,
+    },
+
+    {
+      title: "Requisiciones de bodega",
+      subtitle: "Picking, packing y envío de requisiciones",
+      icon: faDolly,
+      color: "#ff8f44", //"#f4a261",
+      bgColor: "#fef6e6",
+      onPress: () => navigation.navigate("Requisitions"),
+      show: true,
+    },
+
+    {
+      title: "Recepción de requisiciones",
+      subtitle: "Recepción y carga de requisiciones",
+      icon: faTruckRampBox,
+      //color: "#ff8f44", //"#f4a261",
+      //bgColor: "#fef6e6",
+      color: "#ff6f61",
+      bgColor: "#ffe6e1",
+      onPress: () => navigation.navigate("Receive Requisitions"),
       show: true,
     },
   ];
@@ -211,149 +250,153 @@ const Home = () => {
         hidden={false}
         backgroundColor={"transparent"}
       />
-      {renderHeader()}
-     <View style={{flex:1, paddingVertical: 16}}>
-       <BlurView intensity={40} tint="dark" style={styles.profileCard}>
-          <Block style={styles.avatarContainer}>
-            <Image
-              source={Images.Customer}
-              style={styles.avatar}
-              resizeMode="contain"
-            />
-          </Block>
-          <View style={{ flex: 1}}>
-            <BlurView intensity={50} tint="light" style={styles.nameInfo}>
-              <Text
+      <View style={{ flex: 1 }}>
+        {renderHeader()}
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{
+            paddingVertical: isMovil ? (isLandscape ? 4 : 16) : 16,
+            flexGrow: 1,
+          }}
+        >
+          <BlurView intensity={40} tint="dark" style={styles.profileCard}>
+            <Block style={styles.avatarContainer}>
+              <Image
+                source={Images.Customer}
+                style={[
+                  styles.avatar,
+                  {
+                    width: isMovil ? (isLandscape ? 60 : 100) : 125,
+                    height: isMovil ? (isLandscape ? 60 : 100) : 125,
+                  },
+                ]}
+                resizeMode="contain"
+              />
+            </Block>
+            <View style={{ flex: 1 }}>
+              <BlurView
+                intensity={50}
+                tint="light"
                 style={{
-                  fontSize: 24,
-                  fontWeight: "bold",
-                  color: "white",
-                  textAlign: "center",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  marginTop: isMovil ? (isLandscape ? 4 : 4) : 8,
+                  padding: isMovil ? (isLandscape ? 4 : 4) : 8,
+                  borderRadius: 15,
+                  overflow: "hidden",
                 }}
               >
-                {nombre}
+                <Text
+                  style={{
+                    fontSize: isMovil ? (isLandscape ? 16 : 20) : 24,
+                    fontWeight: "bold",
+                    color: "white",
+                    textAlign: "center",
+                  }}
+                >
+                  {nombre}
+                </Text>
+              </BlurView>
+              <BlurView
+                intensity={50}
+                tint="light"
+                style={{
+                  flex: 1,
+                  marginTop: isMovil ? (isLandscape ? 4 : 4) : 8,
+                  padding: isMovil ? (isLandscape ? 4 : 4) : 8,
+                  borderRadius: 20,
+                  overflow: "hidden",
+                }}
+              >
+                <View
+                  style={{
+                    flex: 1,
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    marginTop: isMovil ? (isLandscape ? 0 : 0) : 4,
+                  }}
+                >
+                  {menuItems
+                    .filter((item) => item.show) // Filtra solo los elementos con show en true
+                    .map((item, index) => {
+                      const dynamicColumns = isMovil
+                        ? isLandscape
+                          ? 3
+                          : 2
+                        : 4;
+                      const btnHeight = isMovil
+                        ? isLandscape
+                          ? 105
+                          : 150
+                        : 130;
+                      const iconSize = isMovil ? (isLandscape ? 24 : 28) : 35;
+                      const titleSize = isMovil ? (isLandscape ? 14 : 16) : 16;
+                      const subtitleSize = isMovil
+                        ? isLandscape
+                          ? 11
+                          : 12
+                        : 12;
+
+                      return (
+                        <View
+                          key={index}
+                          style={{
+                            width: `${100 / dynamicColumns}%`,
+                            height: btnHeight,
+                          }}
+                        >
+                          <TouchableOpacity
+                            style={{
+                              flex: 1,
+                              padding: isMovil ? (isLandscape ? 16 : 12) : 16,
+                              backgroundColor: item.bgColor,
+                              borderRadius: 15,
+                              alignItems: "flex-start",
+                              justifyContent: "space-between",
+                              margin: 5,
+                            }}
+                            onPress={item.onPress}
+                          >
+                            <View style={{ height: iconSize + 5 }}>
+                              <FontAwesomeIcon
+                                icon={item.icon}
+                                size={iconSize}
+                                color={item.color}
+                              />
+                            </View>
+                            <View>
+                              <Text
+                                style={{
+                                  fontSize: titleSize,
+                                  fontWeight: "bold",
+                                  color: item.color,
+                                }}
+                              >
+                                {item.title}
+                              </Text>
+                              <Text
+                                style={{
+                                  fontSize: subtitleSize,
+                                  color: item.color,
+                                }}
+                              >
+                                {item.subtitle}
+                              </Text>
+                            </View>
+                          </TouchableOpacity>
+                        </View>
+                      );
+                    })}
+                </View>
+              </BlurView>
+            </View>
+            <View style={{ alignItems: "center", marginTop: 16 }}>
+              <Text style={{ color: "white", fontSize: 14 }}>
+                App Versión {Version}
               </Text>
-            </BlurView>
-            <BlurView
-              intensity={50}
-              tint="light"
-              style={{
-                flex: 1, 
-                marginTop: 12,
-                paddingVertical: 16,
-                paddingHorizontal: 8,
-                borderRadius: 20,
-              overflow: "hidden",
-              }}
-            >
-              <View
-                style={{
-                  flex: 1,
-                  flexDirection: "row",
-                  flexWrap: "wrap",
-                  marginTop: isMovil ? 0 : 8,
-                  minHeight: 120,                  
-                }}
-              >
-                {menuItems
-                  .filter((item) => item.show) // Filtra solo los elementos con show en true
-                  .map((item, index) => (
-                    <View key={index} style={{ width: `${100 / columns}%` }}>
-                      <TouchableOpacity
-                        style={{
-                          flex: 1,
-                          padding: 16,
-                          backgroundColor: item.bgColor,
-                          borderRadius: 15,
-                          alignItems: "flex-start",
-                          justifyContent: "space-between",
-                          margin: 5,
-                        }}
-                        onPress={item.onPress}
-                      >
-                        <View style={{ height: 50 }}>
-                          <FontAwesomeIcon
-                            icon={item.icon}
-                            size={45}
-                            color={item.color}
-                          />
-                        </View>
-                        <View>
-                          <Text
-                            style={{
-                              fontSize: 16,
-                              fontWeight: "bold",
-                              color: item.color,
-                            }}
-                          >
-                            {item.title}
-                          </Text>
-                          <Text style={{ fontSize: 12, color: item.color }}>
-                            {item.subtitle}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-              </View>
-              <View
-                style={{
-                  flex: 1,
-                  flexDirection: "row",
-                  flexWrap: "wrap",
-                  marginTop: isMovil ? 0 : 8,
-                  minHeight: 80,
-                }}
-              >
-                {menuItems2
-                  .filter((item) => item.show) // Filtra solo los elementos con show en true
-                  .map((item, index) => (
-                    <View key={index} style={{ width: `${100 / columns}%` }}>
-                      <TouchableOpacity
-                        style={{
-                          flex: 1,
-                          padding: 16,
-                          backgroundColor: item.bgColor,
-                          borderRadius: 15,
-                          alignItems: "flex-start",
-                          justifyContent: "space-between",
-                          margin: 5,
-                        }}
-                        onPress={item.onPress}
-                      >
-                        <View style={{ height: 50 }}>
-                          <FontAwesomeIcon
-                            icon={item.icon}
-                            size={45}
-                            color={item.color}
-                          />
-                        </View>
-                        <View>
-                          <Text
-                            style={{
-                              fontSize: 16,
-                              fontWeight: "bold",
-                              color: item.color,
-                            }}
-                          >
-                            {item.title}
-                          </Text>
-                          <Text style={{ fontSize: 12, color: item.color }}>
-                            {item.subtitle}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-              </View>
-            </BlurView>
-          </View>
-          <View style={{ alignItems: "center", marginTop: 16 }}>
-            <Text style={{ color: "white", fontSize: 14 }}>
-              App Versión {Version}
-            </Text>
-          </View>
-        </BlurView>
+            </View>
+          </BlurView>
+        </ScrollView>
       </View>
       <ToastNotification ref={toastRef} />
     </ImageBackground>
@@ -362,8 +405,8 @@ const Home = () => {
 
 const styles = StyleSheet.create({
   home: {
-    height: height,
-    width: width,
+    height: "100%",
+    width: "100%",
     //backgroundColor: "#FED30B",
     backgroundColor: "white",
   },
@@ -402,8 +445,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   avatar: {
-    width: isMovil ? 150 : 150,
-    height: isMovil ? 150 : 150,
+    width: isMovil ? 100 : 150,
+    height: isMovil ? 100 : 150,
     borderRadius: 100,
     borderWidth: isMovil ? 6 : 8,
     borderColor: "white",
@@ -411,14 +454,7 @@ const styles = StyleSheet.create({
   button: {
     padding: 8,
   },
-  nameInfo: {
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 20,
-    padding: 16,
-    borderRadius: 15,
-    overflow: "hidden",
-  },
+  nameInfo: {},
 
   thumb: {
     borderRadius: 4,

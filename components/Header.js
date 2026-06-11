@@ -9,6 +9,7 @@ import {
   StatusBar,
   StyleSheet,
   TouchableOpacity,
+  useWindowDimensions,
 } from "react-native";
 import { Block, Text } from "galio-framework";
 import Icon from "./Icon.js";
@@ -22,7 +23,7 @@ import { clearCustomer } from "../screens/Features/Order/OrderSlice";
 import { BlurView } from "expo-blur";
 const Iphone = Platform.OS === "ios" ? true : false;
 //Variable para identificar el tamaño del dispositivo del cual se está accediendo al app
-const isMovil = width < 650 ? true : false;
+const isMovil = Math.min(width, height) < 650 ? true : false;
 
 const Header = ({
   back,
@@ -37,7 +38,13 @@ const Header = ({
   ...props
 }) => {
   const insets = useSafeAreaInsets();
-  const marginTopDevice = Iphone ? insets.top : StatusBar.currentHeight + 10;
+  const { width: currentWidth, height: currentHeight } = useWindowDimensions();
+  const isLandscape = currentWidth > currentHeight;
+  const marginTopDevice = Iphone
+    ? insets.top
+    : isLandscape
+      ? insets.top
+      : StatusBar.currentHeight + 10;
   const navigation = useNavigation();
   const logoViewRef = useRef(null);
   const notifications = []; //useSelector((state) => state.order.notifications);
@@ -102,6 +109,8 @@ const Header = ({
       style={[
         styles.header,
         {
+          height: isMovil ? (isLandscape ? 30 : 50) : 50,
+          maxHeight: isMovil ? (isLandscape ? 30 : 50) : 50,
           marginTop: marginTopDevice,
           backgroundColor: "transparent",
         },
@@ -143,7 +152,16 @@ const Header = ({
             }}
           >
             <Animatable.View ref={logoViewRef}>
-              <Image source={Images.TihsaLogoMini} style={styles.logo} />
+              <Image
+                source={Images.TihsaLogoMini}
+                style={[
+                  styles.logo,
+                  {
+                    width: isMovil ? (isLandscape ? 20 : 30) : 30,
+                    height: isMovil ? (isLandscape ? 20 : 30) : 30,
+                  },
+                ]}
+              />
             </Animatable.View>
           </TouchableOpacity>
         )}
@@ -163,7 +181,7 @@ const Header = ({
             <Text
               style={[styles.textHeader, { color: blur ? "white" : "black" }]}
             >
-              {title.toUpperCase()}{" "}
+              {title.toUpperCase()}
             </Text>
           )
         ) : (
@@ -175,7 +193,15 @@ const Header = ({
           </Text>
         )}
       </Block>
-      <Block style={{flex: 1, justifyContent:"center", alignItems:"center", maxWidth: 60, flexDirection: "row" }}>
+      <Block
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          maxWidth: 60,
+          flexDirection: "row",
+        }}
+      >
         {right && (
           <>
             <TouchableOpacity
@@ -189,7 +215,7 @@ const Header = ({
             >
               <Icon
                 family="ArgonExtra"
-                size={isMovil ? 20 : 24}
+                size={isMovil ? (isLandscape ? 16 : 20) : 24}
                 name="bell"
                 color={blur ? "white" : "black"}
               />
@@ -218,7 +244,7 @@ const Header = ({
             >
               <FontAwesomeIcon
                 icon={"power-off"}
-                size={isMovil ? 20 : 24}
+                size={isMovil ? (isLandscape ? 16 : 20) : 24}
                 color="white"
               />
               <Block
@@ -253,6 +279,8 @@ const Header = ({
       style={[
         styles.header,
         {
+          height: isMovil ? (isLandscape ? 30 : 50) : 50,
+          maxHeight: isMovil ? (isLandscape ? 30 : 50) : 50,
           marginTop: marginTopDevice,
           backgroundColor: blur ? "transparent" : "white",
         },
@@ -319,7 +347,15 @@ const Header = ({
           </Text>
         )}
       </Block>
-      <Block style={{flex: 1, justifyContent:"center", alignItems:"center", maxWidth: 90, flexDirection: "row" }}>
+      <Block
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          maxWidth: 90,
+          flexDirection: "row",
+        }}
+      >
         {right && (
           <>
             <TouchableOpacity
@@ -469,7 +505,7 @@ const styles = StyleSheet.create({
     height: isMovil ? 50 : 50,
     maxHeight: isMovil ? 50 : 50,
     flexDirection: "row",
-    width: width,
+    width: "100%",
     paddingLeft: 0,
     paddingRight: 10,
     //marginTop: //Iphone ? 50 : 10,
@@ -514,8 +550,6 @@ const styles = StyleSheet.create({
   logo: {
     marginLeft: 10,
     zIndex: 3,
-    width: isMovil ? 30 : 30,
-    height: isMovil ? 30 : 30,
     padding: 5,
   },
 });

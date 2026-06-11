@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   StatusBar,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { Block, Text } from "galio-framework";
 import { Input, Switch } from "../../components";
@@ -19,18 +20,17 @@ import { useNavigation } from "@react-navigation/native";
 import { Images } from "../../constants";
 import { setUser } from "../Features/User/UserSlice";
 import axios from "axios";
-import {
-  Login,
-} from "../../settings/EndPoints";
+import { Login } from "../../settings/EndPoints";
 import ToastNotification from "../../components/ToastNotification";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { BlurView } from "expo-blur";
 import { AppVersion } from "../../settings/AppSettings";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import { is } from "date-fns/locale";
 
 //Variable para identificar el tamaño del dispositivo del cual se está accediendo al app
-const isMovil = width < 850 ? true : false;
+const isMovil = Math.min(width, height) < 650 ? true : false;
 //Variable para identificar el sistema operativo del dispositivo del cual se está accediendo al app
 const Iphone = Platform.OS === "ios" ? true : false;
 const paddingTopNotification = Iphone ? 55 : 40;
@@ -38,6 +38,8 @@ const Version = AppVersion.Version;
 const BACKGROUND_KEY = "app_background";
 
 const LoginCustomer = ({ onLoginSuccess }) => {
+  const { width: currentWidth, height: currentHeight } = useWindowDimensions();
+  const isLandscape = currentWidth > currentHeight;
   const toastRef = useRef(null);
   const baseUrlLogin = Login.EndPoint;
   const dispatch = useDispatch();
@@ -48,14 +50,13 @@ const LoginCustomer = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [recordarUsuario, setRecordarUsuario] = useState(false);
   const [backgroundImage, setBackgroundImage] = useState(
-    Images.BackgroundDetalle
+    Images.BackgroundDetalle,
   );
   const passwordRef = useRef();
-   useEffect(() => {
+  useEffect(() => {
     const cargarDatosUsuario = async () => {
-      const recordarUsuarioValue = await AsyncStorage.getItem(
-        "recordarUsuario"
-      );
+      const recordarUsuarioValue =
+        await AsyncStorage.getItem("recordarUsuario");
       if (recordarUsuarioValue !== null && recordarUsuarioValue !== "false") {
         setRecordarUsuario(true);
       } else {
@@ -85,7 +86,7 @@ const LoginCustomer = ({ onLoginSuccess }) => {
         "top",
         "Ingrese el usuario para recordarlo",
         "error",
-        paddingTopNotification
+        paddingTopNotification,
       );
       await AsyncStorage.removeItem("username");
       setUsername("");
@@ -117,7 +118,7 @@ const LoginCustomer = ({ onLoginSuccess }) => {
         "top",
         "Ingrese los campos requeridos para inicio de sesión",
         "error",
-        paddingTopNotification
+        paddingTopNotification,
       );
       setLoading(false);
     }
@@ -143,7 +144,7 @@ const LoginCustomer = ({ onLoginSuccess }) => {
               "top",
               respuesta.Mensaje,
               "error",
-              paddingTopNotification
+              paddingTopNotification,
             );
             setTimeout(() => {
               setLoading(false);
@@ -162,138 +163,132 @@ const LoginCustomer = ({ onLoginSuccess }) => {
   };
   const renderBody = () => {
     return (
-      <View style={styles.formContainer}>
-        <BlurView
-          intensity={10}
-          tint="light"
-          style={{
-            backgroundColor: "rgba(255,255,255,0.25)",
-            //flex: 1,
-            overflow: "hidden",
-            borderRadius: 25,
-            justifyContent: "center",
-            alignItems: "center",
-            width: width * 0.5,
-            minHeight: height * 0.8,
-            maxHeight: isMovil ? "100%" :"90%",
-          }}
-        >
-          <View
-            style={{
-              flex: 1,
-              paddingVertical: isMovil? 12 : 32,
-              justifyContent: "center",
-              alignItems: "center",
-              width: "100%",
-            }}
+    <View style={styles.formContainer}>
+  <BlurView
+    intensity={10}
+    tint="light"
+    style={{
+      backgroundColor: "rgba(255,255,255,0.25)",
+      overflow: "hidden",
+      borderRadius: 25,
+      alignItems: "center",
+      width: isMovil ? (isLandscape ? "60%" : "100%") : "50%",
+      height: isMovil ? (isLandscape ? "95%" : "70%") : "90%",
+      paddingVertical: 20,
+      justifyContent: "center",
+
+    }}
+  >
+    {/* LOGO */}
+    <View
+      style={{
+        marginBottom:  isMovil ? (isLandscape ? 4 : 20) : 20,
+        alignItems: "center",
+      }}
+    >
+      <Image
+        source={Images.LogoApp}
+        style={{
+          width: isMovil ? (isLandscape ? 150 : 200) : 300,
+          height: isMovil ? (isLandscape ? 50 : 70) : 120,
+          resizeMode: "contain",
+        }}
+      />
+    </View>
+
+    {/* FORM */}
+    <View
+      style={{
+        width: isMovil ? "100%" : "70%",
+        paddingHorizontal: 24,
+      }}
+    >
+      <Input
+        shadowless
+        placeholder="Usuario"
+        value={username}
+        returnKeyType="next"
+        onChangeText={handleUsername}
+        iconContent={
+          <Icon
+            size={16}
+            name="user"
+            family="antdesign"
+            color="#8898AA"
+            style={styles.inputIcons}
+          />
+        }
+        onSubmitEditing={() => passwordRef.current?.focus()}
+      />
+
+      <Input
+        right
+        password
+        shadowless
+        placeholder="Contraseña"
+        value={password}
+        onChangeText={handlePasswordChange}
+        secureTextEntry={!showPassword}
+        iconContent={
+          <TouchableOpacity
+            onPress={togglePasswordVisibility}
+            style={{ marginRight: -15 }}
           >
-            <Image source={Images.LogoApp} style={styles.logo} />
-           {/*  <Text
-              style={{
-                fontSize: 24,
-                fontWeight: "bold",
-                color: "white",
-                marginTop: 24,
-              }}
-            >
-              Bodega
-            </Text> */}
-          </View>
-          <View
-            style={{
-              flex: 1,
-              width: isMovil ? "100%" : "70%",
-              paddingHorizontal: 24,
-            }}
-          >
-            <Input
-              shadowless
-              placeholder="Usuario"
-              value={username}
-              returnKeyType="next"
-              onChangeText={handleUsername}
-              iconContent={
-                <Icon
-                  size={16}
-                  name="user"
-                  family="antdesign"
-                  color="#8898AA"
-                  style={styles.inputIcons}
-                />
-              }
-              onSubmitEditing={() => {
-                if (passwordRef.current) {
-                  passwordRef.current.focus();
-                }
-              }}
+            <FontAwesomeIcon
+              icon={showPassword ? faEyeSlash : faEye}
+              size={16}
+              color="#8898AA"
+              style={styles.inputIcons}
             />
-            <Input
-              right
-              password
-              shadowless
-              placeholder="Contraseña"
-              value={password}
-              onChangeText={handlePasswordChange}
-              secureTextEntry={!showPassword}
-              iconContent={
-                <TouchableOpacity onPress={togglePasswordVisibility} style={{marginRight: -15}}>
-                  <FontAwesomeIcon icon={showPassword ? faEyeSlash : faEye} size={16} color="#8898AA" style={styles.inputIcons} />
-                 
-                </TouchableOpacity>
-              }
-              onSubmitEditing={handleLoginPress}
-            />
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                marginBottom: 5,
-              }}
-            >
-              <Text size={isMovil ? 14 : 18} color="#FFFFFF">
-                Recordar usuario
-              </Text>
-              <Switch
-                color="success"
-                value={recordarUsuario}
-                onValueChange={toggleRecordarUsuario}
-              />
-            </View>
-          </View>
-          <View
-            style={{
-              flex: 1,
-              width: "100%",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <TouchableOpacity
-              style={styles.createButton}
-              onPress={handleLoginPress}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
-                <Text style={styles.textButton}>Ingresar</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-          <View>
-            <Text
-              style={{
-                fontSize: 12,
-                color: "white",
-                textAlign: "center",
-                marginBottom: 12,
-                fontWeight: "bold",
-              }}
-            >
-              Tihsa Bodegas App v{Version}
-            </Text>
-          </View>
-        </BlurView>
+          </TouchableOpacity>
+        }
+        onSubmitEditing={handleLoginPress}
+      />
+
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "space-between",
+          marginBottom: isMovil ? (isLandscape ? 4 : 10) : 10,
+        }}
+      >
+        <Text size={isMovil ? 14 : 18} color="#FFFFFF">
+          Recordar usuario
+        </Text>
+        <Switch
+          color="success"
+          value={recordarUsuario}
+          onValueChange={toggleRecordarUsuario}
+        />
       </View>
+
+      <TouchableOpacity
+        style={styles.createButton}
+        onPress={handleLoginPress}
+      >
+        {loading ? (
+          <ActivityIndicator size="small" color="white" />
+        ) : (
+          <Text style={styles.textButton}>Ingresar</Text>
+        )}
+      </TouchableOpacity>
+    </View>
+
+    {/* FOOTER */}
+    <View style={{ marginTop: isMovil ? (isLandscape ? 4 : 20) : 20,  }}>
+      <Text
+        style={{
+          fontSize: 12,
+          color: "white",
+          textAlign: "center",
+          fontWeight: "bold",
+        }}
+      >
+        Tihsa Bodegas App v{Version}
+      </Text>
+    </View>
+  </BlurView>
+</View>
     );
   };
   return (
@@ -313,18 +308,16 @@ const LoginCustomer = ({ onLoginSuccess }) => {
 const styles = StyleSheet.create({
   home: {
     flex: 1,
-    height: height,
-    width: width,
+    height: "100%",
+    width: "100%",
   },
   logo: {
     zIndex: 3,
-    width: isMovil ? 200 : 400,
-    height: isMovil ? 70 : 160,
   },
   formContainer: {
     flex: 1,
-    width: width,
-    height: height,
+    width: "100%",
+    height: "100%",
     padding: 20,
     justifyContent: "center",
     alignItems: "center",
@@ -339,6 +332,7 @@ const styles = StyleSheet.create({
     padding: 8,
     paddingHorizontal: 60,
     justifyContent: "center",
+    alignItems: "center",
   },
   textButton: {
     color: "white",

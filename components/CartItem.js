@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import React, { useCallback } from "react";
 import {
+
   Image,
   View,
   Text,
@@ -8,10 +9,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  useWindowDimensions,
 } from "react-native";
 
-const { width } = Dimensions.get("screen");
-const isMovil = width < 650;
+const { width, height } = Dimensions.get("screen");
+const isMovil = Math.min(width, height) < 650 ? true : false;
+
 function formatCurrency(amount, currencyCode) {
   if (typeof amount !== "number") {
     return ""; // o puedes retornar un valor predeterminado o lanzar un error
@@ -24,73 +27,114 @@ function formatCurrency(amount, currencyCode) {
 const CartItem = React.memo(
   ({
     showPacking,
+    showPackingEnv, // ✅ NUEVO
     showPicking,
     showCost,
     showEdit,
     item,
     onPress,
     renderEdit,
+    isPickingApp,
   }) => {
+    const { width, height } = useWindowDimensions();
+    const isMovil = Math.min(width, height) < 650;
+    const isLandscape = width > height;
+
     const handlePress = useCallback(() => {
       onPress(item);
     }, [item.Codigo, onPress]);
 
+    // 🔥 Bloqueo si existencia es menor a cantidad (SOLO si estamos en modo picking)
+    const isIncomplete = isPickingApp && (item.Existencia ?? 0) < item.Cantidad;
+
     const Checked = !!item.Picking;
-    const Pending = item.Cantidad != item.CantidadPicking;
-    const Packed = showPacking && item.Cantidad === item.CantidadPl;
+    const Pending = showPicking ? item.Cantidad != item.CantidadPicking : false;
+
+    // 🔥 Packing original (NO se toca)
+    const Packed = showPacking && item.Cantidad === item.CantidadPL;
+
+    // 🔥 NUEVO packing salida
+    const PackedSend =
+      showPackingEnv && item.Cantidad === (item.CantidadEnv ?? 0);
+
+    // 🔥 Centralización (sin cambiar lógica original)
+    const isPacked = showPacking ? Packed : showPackingEnv ? PackedSend : false;
+
+    const packingCantidad = showPacking
+      ? item.CantidadPL
+      : showPackingEnv
+        ? item.CantidadEnv
+        : null;
 
     return (
       <TouchableHighlight
         underlayColor="#EFEFEF"
-        onPress={showPacking ? null : handlePress}
+        onPress={showPacking || showPackingEnv || isIncomplete ? null : handlePress} // ✅ soporta ambos y bloquea incompleto
       >
         <View
           style={[
             styles.mainCardView,
-            Packed && styles.mainCardViewPacked,
+            isPacked && styles.mainCardViewPacked, // ✅ centralizado
+            isIncomplete && styles.mainCardViewIncomplete, // 🔴 fondo rojo si es incompleto
           ]}
         >
           <View style={{ flexDirection: "row" }}>
             {/* Imagen */}
-            <View style={[styles.imageWrapper, Packed && styles.imageWrapperPacked]}>
+            <View
+              style={[
+                styles.imageWrapper,
+                isPacked && styles.imageWrapperPacked, // ✅ centralizado
+              ]}
+            >
               <Image
                 source={{ uri: item.Foto }}
-                style={styles.productImageCarrousel}
+                style={[
+                  styles.productImageCarrousel,
+                  {
+                    width: isMovil ? (isLandscape ? 60 : 90) : 70,
+                    height: isMovil ? (isLandscape ? 60 : 90) : 70,
+                  }
+                ]}
               />
             </View>
 
             {/* Info */}
             <View style={{ flex: 1 }}>
-              <Text style={showPacking ? styles.text : styles.textBold}>
+              <Text style={[showPacking ? styles.text : styles.textBold, { fontSize: isMovil && isLandscape ? 8 : (isMovil ? 10 : 12) }]}>
                 Ubicación: {item.Ubicacion}
               </Text>
 
               <View style={styles.rowTop}>
-                <Text style={styles.title} numberOfLines={3}>
-                  <Text style={showPacking ? styles.text : styles.textBold}>
-                    {item.Codigo} -{" "}
+                <Text style={[styles.title, { fontSize: isMovil && isLandscape ? 10 : 12 }]} numberOfLines={isLandscape ? 1 : 3}>
+                  <Text style={[showPacking ? styles.text : styles.textBold, { fontSize: isMovil && isLandscape ? 10 : 12 }]}>
+                    {item.Codigo} -
                   </Text>
                   {item.NombreArticulo}
                 </Text>
-                <View
-                  style={[
-                    styles.checkBox,
-                    {
-                      borderColor: Checked
-                        ? Pending
-                          ? "#FFA500"
-                          : "#25D366"
-                        : "gray",
-                    },
-                  ]}
-                >
-                  <FontAwesomeIcon
-                    icon={Checked ? "square-check" : "square"}
-                    size={16}
-                    color={Checked ? (Pending ? "#FFA500" : "#25D366") : "gray"}
-                  />
-                </View>
+                {showPicking && (
+                  <View
+                    style={[
+                      styles.checkBox,
+                      {
+                        borderColor: Checked
+                          ? Pending
+                            ? "#FFA500"
+                            : "#25D366"
+                          : "gray",
+                      },
+                    ]}
+                  >
+                    <FontAwesomeIcon
+                      icon={Checked ? "square-check" : "square"}
+                      size={16}
+                      color={
+                        Checked ? (Pending ? "#FFA500" : "#25D366") : "gray"
+                      }
+                    />
+                  </View>
+                )}
               </View>
+
               <View style={{ flexDirection: "row" }}>
                 <View style={{ flex: 1 }}>
                   <View
@@ -102,7 +146,7 @@ const CartItem = React.memo(
                   >
                     <View
                       style={{
-                        backgroundColor: Packed ? "#EAF7EF":"white",
+                        backgroundColor: isPacked ? "#EAF7EF" : "white",
                         borderRadius: 4,
                         paddingRight: 4,
                         marginHorizontal: 0,
@@ -145,18 +189,18 @@ const CartItem = React.memo(
                       </View>
                     )}
 
-                    {/* 🔹 Packing */}
-                    {showPacking && (
+                    {/* 🔹 Packing (IN / OUT unificado) */}
+                    {(showPacking || showPackingEnv) && (
                       <View
                         style={{
-                          backgroundColor: Packed ? "#EAF7EF":"white",
+                          backgroundColor: isPacked ? "#EAF7EF" : "white",
                           borderRadius: 4,
                           paddingHorizontal: 4,
                           marginHorizontal: 0,
                         }}
                       >
                         <Text style={styles.textBold}>
-                          {"Packing: " + item.CantidadPl}
+                          {`Packing: ${packingCantidad ?? 0}`}
                         </Text>
                       </View>
                     )}
@@ -172,7 +216,16 @@ const CartItem = React.memo(
                     </Text>
                   )}
                 </View>
-                {showEdit && renderEdit}
+
+                {showEdit && !isIncomplete && renderEdit}
+                {showEdit && isIncomplete && (
+                  <View style={{ flex: 1, maxWidth: 80, justifyContent: "center", alignItems: "center" }}>
+                    <FontAwesomeIcon icon={"circle-exclamation"} size={18} color="#FF4D4F" />
+                    <Text style={{ fontSize: 10, color: "#FF4D4F", fontWeight: "bold", marginTop: 4, textAlign: "center" }}>
+                      Stock{"\n"}Insuficiente
+                    </Text>
+                  </View>
+                )}
               </View>
             </View>
           </View>
@@ -182,7 +235,9 @@ const CartItem = React.memo(
   },
   (prev, next) =>
     prev.item.Picking === next.item.Picking &&
-    prev.item.Cantidad === next.item.Cantidad,
+    prev.item.Cantidad === next.item.Cantidad &&
+    prev.item.CantidadPL === next.item.CantidadPL && // ✅ agregado
+    prev.item.CantidadEnv === next.item.CantidadEnv, // ✅ agregado
 );
 
 const styles = StyleSheet.create({
@@ -205,30 +260,36 @@ const styles = StyleSheet.create({
     borderColor: "#25D366",
     //opacity: 0.75,
   },
+  mainCardViewIncomplete: {
+    backgroundColor: "#FAFAFA",
+    borderLeftWidth: 4,
+    borderLeftColor: "#FF4D4F", // Borde de acento moderno izquierdo
+    borderTopWidth: 1,
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: "#EFEFEF",
+    opacity: 0.85, // Aspecto sutilmente deshabilitado
+  },
   imageWrapper: {
     flexGrow: 1,
-    maxWidth: isMovil ? 90 : 70,
+    maxWidth: 90,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 6,
   },
-imageWrapperPacked: {
+  imageWrapperPacked: {
     flexGrow: 1,
-    maxWidth: isMovil ? 90 : 70,
+    maxWidth: 90,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 6,
-    backgroundColor:"#EAF7EF",
+    backgroundColor: "#EAF7EF",
   },
   productImageCarrousel: {
-    width: isMovil ? 90 : 70,
-    height: isMovil ? 90 : 70,
     resizeMode: "contain",
   },
-   productImageCarrouselPacked: {
+  productImageCarrouselPacked: {
     backgroundColor: "#EAF7EF",
-    width: isMovil ? 90 : 70,
-    height: isMovil ? 90 : 70,
     resizeMode: "contain",
   },
 

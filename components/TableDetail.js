@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { DataTable, IconButton, Tooltip } from "react-native-paper";
 import { Dimensions, Text, View } from "react-native";
 const { width, height } = Dimensions.get("screen");
-const isMovil = width < 650 ? true : false;
+const isMovil = Math.min(width, height) < 650 ? true : false;
 
 const TableDetail = ({ data, pagination }) => {
   const [page, setPage] = useState(0);

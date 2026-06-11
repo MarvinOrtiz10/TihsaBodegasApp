@@ -3,7 +3,7 @@ import { StyleSheet, Image, Dimensions, View } from "react-native";
 import { Block, Text, theme } from "galio-framework";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 const { width, height } = Dimensions.get("screen");
-const isMovil = width < 650 ? true : false;
+const isMovil = Math.min(width, height) < 650 ? true : false;
 
 const CardArticleFerretExpo = memo(
   ({ item, horizontal, full, style, imageStyle }) => {

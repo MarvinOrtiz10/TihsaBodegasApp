@@ -63,7 +63,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import OrderCart from "../../../components/OrderCart.js";
 
 //Variable para identificar el tamaño del dispositivo del cual se está accediendo al app
-const isMovil = width < 650 ? true : false;
+const isMovil = Math.min(width, height) < 650 ? true : false;
 //Variable para identificar el sistema operativo del dispositivo del cual se está accediendo al app
 const Iphone = Platform.OS === "ios" ? true : false;
 const paddingTopNotification = Iphone ? 55 : 40;
@@ -117,7 +117,8 @@ const PackingOrder = () => {
   const [formaPago, setFormaPago] = useState(1);
   const [formaPagoLabel, setFormaPagoLabel] = useState("CONTADO");
   const [optionsFormasPago, setOptionsFormasPago] = useState([]);
-  const numColumns = isMovil ? 2 : 5;
+  const { width: currentWidth, height: currentHeight } = useWindowDimensions();
+  const numColumns = isMovil ? (currentWidth > currentHeight ? 2 : 1) : 5;
   //Variables para el artículo
   const [article, setArticle] = useState({});
   const [cantidad, setCantidad] = useState(1);
@@ -230,7 +231,7 @@ const PackingOrder = () => {
     }
 
     const completed = orderDetails.every(
-      (item) => Number(item.Cantidad) === Number(item.CantidadPl)
+      (item) => Number(item.Cantidad) === Number(item.CantidadPL)
     );
 
     setPackingChecked(completed);
@@ -403,7 +404,7 @@ const PackingOrder = () => {
       }
 
       const article = orderDetails[index]; // ✅ AQUÍ
-      if (article.CantidadPl + cantidadPl > article.Cantidad) {
+      if (article.CantidadPL + cantidadPl > article.Cantidad) {
         notificar(
           "top",
           `La cantidad de packing excede la cantidad de la orden para el código ${article.Codigo}`,
@@ -434,7 +435,7 @@ const PackingOrder = () => {
         CodEmp: codEmp,
         NumOrden: numOrden,
         Codigo: article.Codigo,
-        CantidadPl: cantidadPl,
+        CantidadPL: cantidadPl,
       };
       const response = await axios.put(baseUrlUpdatePacking, data, {
         headers: { "content-type": "application/json" },
@@ -450,7 +451,7 @@ const PackingOrder = () => {
         setOrderDetails((prev) =>
           prev.map((detail) =>
             detail.Codigo === articleModified.Codigo
-              ? { ...detail, CantidadPl: articleModified.CantidadPl }
+              ? { ...detail, CantidadPL: articleModified.CantidadPL }
               : detail
           )
         );
@@ -510,7 +511,7 @@ const PackingOrder = () => {
       }
 
       const article = orderDetails[index]; // ✅ AQUÍ
-      if (article.CantidadPl + cantidadPl > article.Cantidad) {
+      if (article.CantidadPL + cantidadPl > article.Cantidad) {
         notificar(
           "top",
           `La cantidad de packing excede la cantidad de la orden para el código ${article.Codigo}`,
@@ -544,7 +545,7 @@ const PackingOrder = () => {
         CodEmp: codEmp,
         NumOrden: numOrden,
         Codigo: article.Codigo,
-        CantidadPl: cantidadPl,
+        CantidadPL: cantidadPl,
       };
       const response = await axios.put(baseUrlUpdatePacking, data, {
         headers: { "content-type": "application/json" },
@@ -560,7 +561,7 @@ const PackingOrder = () => {
         setOrderDetails((prev) =>
           prev.map((detail) =>
             detail.Codigo === articleModified.Codigo
-              ? { ...detail, CantidadPl: articleModified.CantidadPl }
+              ? { ...detail, CantidadPL: articleModified.CantidadPL }
               : detail
           )
         );
@@ -1258,7 +1259,7 @@ const PackingOrder = () => {
         hidden={false}
       />
       {renderHeader()}
-      <View style={{ flex: 1, width: width, backgroundColor: "white" }}>
+      <View style={{ flex: 1, width: "100%", backgroundColor: "white" }}>
         {accountState == 0 ? (
           <View style={{ flexDirection: "row", flex: 1, paddingTop: 5 }}>
             <View
@@ -1538,7 +1539,7 @@ const PackingOrder = () => {
                       fontSize: 14,
                     }}
                   >
-                    Nit para SAT:{" "}
+                    Nit para SAT:
                     <Text
                       style={{
                         marginLeft: 2,
@@ -2013,8 +2014,8 @@ const PackingOrder = () => {
 const styles = StyleSheet.create({
   home: {
     flex: 1,
-    height: height,
-    width: width,
+    height: "100%",
+    width: "100%",
     backgroundColor: "white",
   },
   search: {
@@ -2290,7 +2291,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FED30B",
     borderRadius: 50,
     height: 50,
-    width: width * 0.9,
+    width: "90%",
   },
   textRequestButton: {
     color: "white", //"#00296b",
@@ -2305,7 +2306,7 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: 8,
     padding: 16,
-    width: width - 20,
+    width: "100%"- 20,
     height: 100,
   },
 
@@ -2335,7 +2336,7 @@ const styles = StyleSheet.create({
 
   button: {
     marginBottom: theme.SIZES.BASE,
-    //width: width - theme.SIZES.BASE * 2,
+    //width: "100%"- theme.SIZES.BASE * 2,
   },
   modalHeaderTitle: {
     fontSize: 18,

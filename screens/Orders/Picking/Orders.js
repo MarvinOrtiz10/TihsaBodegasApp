@@ -39,7 +39,8 @@ const BACKGROUND_KEY = "app_background";
 
 const Orders = () => {
   const { width, height } = useWindowDimensions();
-  const isMovil = width < 650 ? true : false;
+  const isMovil = Math.min(width, height) < 650 ? true : false;
+  const columns = isMovil ? (width > height ? 2 : 1) : 3;
   const baseUrl = PickingOrders.EndPoint;
   const userState = useSelector((state) => state.user);
   const codEmp = userState.length !== 0 ? userState[0].CodEmp : 1;
@@ -344,12 +345,12 @@ const Orders = () => {
     },
     home: {
       flex: 1,
-      height: height,
-      width: width,
+      height: "100%",
+      width: "100%",
       backgroundColor: "white",
     },
     articles: {
-      width: width - theme.SIZES.BASE * 2,
+      width: "100%"- theme.SIZES.BASE * 2,
       paddingVertical: theme.SIZES.BASE,
     },
     floatingButton: {
@@ -393,7 +394,7 @@ const Orders = () => {
     },
     search: {
       height: 48,
-      width: width - 32,
+      width: "100%"- 32,
       marginHorizontal: 16,
       borderRadius: 25,
       borderColor: argonTheme.COLORS.BORDER,
@@ -405,7 +406,7 @@ const Orders = () => {
     },
     tab: {
       backgroundColor: theme.COLORS.TRANSPARENT,
-      width: width * 0.35,
+      width: "35%",
       borderRadius: 0,
       borderWidth: 0,
       height: 24,
@@ -497,12 +498,12 @@ const Orders = () => {
       />
       {renderHeader()}
       <ScrollView
-        style={{ flexGrow: 1, width: width, backgroundColor: "white" }}
+        style={{ flexGrow: 1, width: "100%", backgroundColor: "white" }}
       >
         <Block
           style={{
             backgroundColor: "white",
-            width: width,
+            width: "100%",
             minHeight: height * 0.8,
             borderTopWidth: 0.5,
             borderColor: "#F2F2F2",
@@ -530,7 +531,7 @@ const Orders = () => {
               <Block style={{ flex: 1, minHeight: 200, paddingHorizontal: 8 }}>
                 <FlashList
                   data={searchResults}
-                  numColumns={3}
+                  numColumns={columns}
                   renderItem={renderItemOrder}
                   keyExtractor={(item, index) => index}
                   ListHeaderComponent={<View style={{ width: "100%" }} />}

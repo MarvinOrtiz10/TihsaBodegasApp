@@ -15,7 +15,7 @@ import {
 
 const { width, height } = Dimensions.get("screen");
 //Variable para identificar el tamaño del dispositivo del cual se está accediendo al app
-const isMovil = width < 650 ? true : false;
+const isMovil = Math.min(width, height) < 650 ? true : false;
 
 const CountdownApp = ({
   targetDate,
@@ -89,7 +89,7 @@ const CountdownApp = ({
   // Diseño del countdown para los colores de texto y fondo
   const stylesCustom = StyleSheet.create({
     container: {
-      width: width - 10,
+      width: "100%"- 10,
       flex: 1,
       justifyContent: "center",
       alignItems: "center",

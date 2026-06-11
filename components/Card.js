@@ -2,7 +2,7 @@ import React, { memo } from "react";
 import { StyleSheet, Image, Dimensions, View } from "react-native";
 import { Block, Text, theme } from "galio-framework";
 const { width, height } = Dimensions.get("screen");
-const isMovil = width < 650 ? true : false;
+const isMovil = Math.min(width, height) < 650 ? true : false;
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 
 const Card = memo(
@@ -92,7 +92,7 @@ const Card = memo(
           </Block>
           <Block style={styles.cardPrice}>
             <Text size={10} color={(item.Inactivo || item.Descontinuado) ? "gray" : "#007AFF"} bold>
-              Precio{" "}
+              Precio
               {formatCurrency(
                 tipoCliente == 1 ? item.Precio : item.PrecioFeria,
                 "GTQ"

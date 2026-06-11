@@ -15,39 +15,51 @@ import {
 
 import { Block, theme, Text } from "galio-framework";
 import { useSelector, useDispatch } from "react-redux";
-import Icon from "../../components/Icon.js";
-import Input from "../../components/Input.js";
-import argonTheme from "../../constants/Theme.js";
+import Icon from "../../../components/Icon.js";
+import Input from "../../../components/Input.js";
+import argonTheme from "../../../constants/Theme.js";
 import { Ionicons } from "@expo/vector-icons";
 import { FlashList } from "@shopify/flash-list";
-import Header from "../../components/Header.js";
-import { Images } from "../../constants/index.js";
+import Header from "../../../components/Header.js";
+import { Images } from "../../../constants/index.js";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import {
   preprocessDataOnce,
   searchEngineAdvance,
-} from "../Features/Helpers/SearchEngine.js";
-import { useGetBodegasQuery, useGetOrdersQuery } from "../../services/Api.js";
-import ToastNotification from "../../components/ToastNotification.js";
+} from "../../Features/Helpers/SearchEngine.js";
+import {
+  useGetBodegasQuery,
+  useGetOrdersQuery,
+} from "../../../services/Api.js";
+import ToastNotification from "../../../components/ToastNotification.js";
 import axios from "axios";
-import { AcuerdoVenta, RequisitionsList } from "../../settings/EndPoints.js";
+import {
+  AcuerdoVenta,
+  Requisition,
+  RequisitionsList,
+} from "../../../settings/EndPoints.js";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import Select2 from "../../components/Select2.js";
+import Select2 from "../../../components/Select2.js";
 import { BlurView } from "expo-blur";
-import { faPaperPlane } from "@fortawesome/free-solid-svg-icons";
-import Modals from "../../components/Modals.js";
+import {
+  faBoxesPacking,
+  faInbox,
+  faPaperPlane,
+} from "@fortawesome/free-solid-svg-icons";
+import Modals from "../../../components/Modals.js";
 //Variable para identificar el tamaño del dispositivo del cual se está accediendo al app
 const Iphone = Platform.OS === "ios" ? true : false;
 const paddingTopNotification = Iphone ? 50 : 30;
 const BACKGROUND_KEY = "app_background";
 
-const Requisitions = () => {
+const ReceiveRequisitions = () => {
   const { width, height } = useWindowDimensions();
-    const isLandscape = width > height;
-  const isMovil = Math.min(width, height) < 650 ? true : false;
+  const isMovil = Math.min(width, height) < 650;
+  const isLandscape = width > height;
   const columns = isMovil ? (width > height ? 2 : 1) : 3;
-  const baseUrl = RequisitionsList.EndPoint;
+  const baseUrl = Requisition.EndPoint;
   const userState = useSelector((state) => state.user);
+  const CodBodega = userState.length !== 0 ? userState[0].CodBodega : 1;
   const {
     data: dataBodegas,
     error: errorBodegas,
@@ -73,7 +85,7 @@ const Requisitions = () => {
   const [showOptions, setShowOptions] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const isMobilePortrait = isMovil && !isLandscape;
-const isMobileLandscape = isMovil && isLandscape;
+  const isMobileLandscape = isMovil && isLandscape;
 
   const loadBackground = async () => {
     try {
@@ -92,10 +104,9 @@ const isMobileLandscape = isMovil && isLandscape;
       setPage(1);
       setHasMore(true);
 
-      const response = await axios.get(baseUrl);
+      const response = await axios.get(`${baseUrl}/Recibido/${CodBodega}`);
 
       const respuesta = response.data.Data;
-
       const processedData = preprocessDataOnce(respuesta, [
         "NumTraslado",
         "CodBodegaDestino",
@@ -160,104 +171,103 @@ const isMobileLandscape = isMovil && isLandscape;
   /* Función para mostrar la barra de búsqueda de cada página, se muestra cuando se agrega search en las props dónde se importa el Header */
   const renderSearch = () => {
     return (
-     <View style={{ flexDirection: "row", alignItems: "center" }}>
-  
-  {/* SEARCH SIEMPRE */}
-  <View style={{ flex: 1, paddingHorizontal: 8 }}>
-    <Input
-      right
-      color="black"
-      style={styles.search}
-      placeholder="¿Qué requisición estás buscando?"
-      placeholderTextColor="#8898AA"
-      iconContent={
-        <TouchableOpacity
-          onPress={showClearIcon ? handleClear : null}
-          style={showClearIcon && styles.circleCloseButton}
-        >
-          {showClearIcon ? (
-            <Ionicons name="close" size={16} color="#666" />
-          ) : (
-            <Icon
-              size={16}
-              color={theme.COLORS.MUTED}
-              name="search-zoom-in"
-              family="ArgonExtra"
-            />
-          )}
-        </TouchableOpacity>
-      }
-      value={searchText}
-      onChangeText={handleSearch}
-    />
-  </View>
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        {/* SEARCH SIEMPRE */}
+        <View style={{ flex: 1, paddingHorizontal: 8 }}>
+          <Input
+            right
+            color="black"
+            style={styles.search}
+            placeholder="¿Qué requisición estás buscando?"
+            placeholderTextColor="#8898AA"
+            iconContent={
+              <TouchableOpacity
+                onPress={showClearIcon ? handleClear : null}
+                style={showClearIcon && styles.circleCloseButton}
+              >
+                {showClearIcon ? (
+                  <Ionicons name="close" size={16} color="#666" />
+                ) : (
+                  <Icon
+                    size={16}
+                    color={theme.COLORS.MUTED}
+                    name="search-zoom-in"
+                    family="ArgonExtra"
+                  />
+                )}
+              </TouchableOpacity>
+            }
+            value={searchText}
+            onChangeText={handleSearch}
+          />
+        </View>
 
-  {/* 👉 CASO MOBILE PORTRAIT */}
-  {isMobilePortrait && (
-    <TouchableOpacity onPress={() => setShowFilters(true)}>
-      <View
-        style={{
-          backgroundColor: "#F2F2F2",
-          padding: 10,
-          borderRadius: 50,
-          marginRight: 8,
-        }}
-      >
-        <FontAwesomeIcon icon={"filter"} size={18} color="#666" />
-      </View>
-    </TouchableOpacity>
-  )}
+        {/* 👉 CASO MOBILE PORTRAIT */}
+        {isMobilePortrait && (
+          <TouchableOpacity onPress={() => setShowFilters(true)}>
+            <View
+              style={{
+                backgroundColor: "#F2F2F2",
+                padding: 10,
+                borderRadius: 50,
+                marginRight: 8,
+              }}
+            >
+              <FontAwesomeIcon icon={"filter"} size={18} color="#666" />
+            </View>
+          </TouchableOpacity>
+        )}
 
-  {/* 👉 CASO DESKTOP o MOBILE LANDSCAPE */}
-  {( !isMovil || isMobileLandscape ) && (
-    <View
-      style={{
-        flex: 1,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-around",
-      }}
-    >
-      <Text>Filtrar por:</Text>
+        {/* 👉 CASO DESKTOP o MOBILE LANDSCAPE */}
+        {(!isMovil || isMobileLandscape) && (
+          <View
+            style={{
+              flex: 1,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-around",
+            }}
+          >
+            <Text>Filtrar por:</Text>
 
-      <View style={{ flex: 1, paddingHorizontal: 4 }}>
-        <Select2
-          options={optionsBodegas}
-          value={codBodegaOrigen}
-          setValue={setCodBodegaOrigen}
-          onSelect={handleSelectBodegaOrigen}
-          placeholder={!isMobilePortrait && "Bodega Origen"}
-          doneText="Aceptar"
-        />
-      </View>
+            <View style={{ flex: 1, paddingHorizontal: 4 }}>
+              <Select2
+                options={optionsBodegas}
+                value={codBodegaOrigen}
+                setValue={setCodBodegaOrigen}
+                onSelect={handleSelectBodegaOrigen}
+                placeholder={!isMobilePortrait && "Bodega Origen"}
+                doneText="Aceptar"
+              />
+            </View>
 
-      <View style={{ flex: 1, paddingHorizontal: 4 }}>
-        <Select2
-          options={optionsBodegas}
-          value={codBodegaDestino}
-          setValue={setCodBodegaDestino}
-          onSelect={handleSelectBodegaDestino}
-          placeholder={!isMobilePortrait && "Bodega Destino"}
-          doneText="Aceptar"
-        />
-      </View>
+            <View style={{ flex: 1, paddingHorizontal: 4 }}>
+              <Select2
+                options={optionsBodegas}
+                value={codBodegaDestino}
+                setValue={setCodBodegaDestino}
+                onSelect={handleSelectBodegaDestino}
+                placeholder={!isMobilePortrait && "Bodega Destino"}
+                doneText="Aceptar"
+              />
+            </View>
 
-      {(codBodegaDestino || codBodegaOrigen) && (
-        <TouchableOpacity
-          onPress={() => {
-            setCodBodegaDestino(null);
-            setCodBodegaOrigen(null);
-            cargarInformacion();
-          }}
-        >
-          <View style={styles.clearFilterBtn}>
-            <FontAwesomeIcon icon={"trash"} size={16} color={"#666"} />
+            {(codBodegaDestino || codBodegaOrigen) && (
+              <TouchableOpacity
+                onPress={() => {
+                  setCodBodegaDestino(null);
+                  setCodBodegaOrigen(null);
+                  cargarInformacion();
+                }}
+              >
+                <View style={styles.clearFilterBtn}>
+                  <FontAwesomeIcon icon={"trash"} size={16} color={"#666"} />
+                </View>
+              </TouchableOpacity>
+            )}
           </View>
-        </TouchableOpacity>
-      )}
-    </View>
-  )}
-</View>
+        )}
+      </View>
     );
   };
   /*Función que renderiza en el header las props que vienen desde el componente, agrega barra de búsqueda, opciones y tabs en el componente Header */
@@ -266,22 +276,17 @@ const isMobileLandscape = isMovil && isLandscape;
       <Header
         back={true}
         scrollTittle={false}
-        title={"Requisiciones de bodegas"}
+        title={"Recepción de requisiciones de bodegas"}
         right
         blur={true}
       />
     );
   };
-  const handlePressViewRequisitions = (row) => {
-    navigation.navigate("Picking Requisition", { order: row.NumTraslado });
+  const handlePressReceiveRequisitions = (row) => {
+    navigation.navigate("Packing Receive Requisition", {
+      order: row.NumTraslado,
+    });
   };
-  const handlePressNewRequisition = () => {
-    navigation.navigate("New Picking Requisition", { order: 0 });
-  };
-   const handlePressReceiveRequisition = () =>{
-    navigation.navigate("Receive Requisitions");
-  }
-
   function formatCurrency(amount, currencyCode) {
     var moneda = amount;
     if (typeof moneda !== "number") {
@@ -305,11 +310,13 @@ const isMobileLandscape = isMovil && isLandscape;
   const renderItemRequisitions = useCallback(({ item }) => {
     const Checked = !!item.Reservado;
     const Send = !!item.Enviada;
+    const Receive = !!item.Entregada;
+    const Charged = !!item.Trasladada;
     return (
       <TouchableHighlight
         activeOpacity={0.5}
         underlayColor="#E6F2EF"
-        onPress={() => handlePressViewRequisitions(item)}
+        onPress={() => handlePressReceiveRequisitions(item)}
       >
         <View style={styles.mainCardView}>
           <View>
@@ -349,7 +356,7 @@ const isMobileLandscape = isMovil && isLandscape;
             <View
               style={{
                 flexDirection: "row",
-                justifyContent: Checked && Send ? "space-between" : "flex-end",
+                justifyContent: "space-between",
               }}
             >
               {Checked && (
@@ -385,7 +392,7 @@ const isMobileLandscape = isMovil && isLandscape;
                   </View>
                 </View>
               )}
-              {Send && (
+              {Receive && (
                 <View
                   style={{
                     flexDirection: "row",
@@ -396,7 +403,7 @@ const isMobileLandscape = isMovil && isLandscape;
                   }}
                 >
                   <Text size={14} color="#007AFF" bold>
-                    Enviada
+                    Recibida
                   </Text>
                   <View
                     style={{
@@ -407,13 +414,46 @@ const isMobileLandscape = isMovil && isLandscape;
                       borderWidth: 1,
                       borderRadius: 5,
                       marginLeft: 4,
-                      borderColor: Send ? "#007AFF" : "#F2F2F2",
+                      borderColor: Receive ? "#007AFF" : "#F2F2F2",
                     }}
                   >
                     <FontAwesomeIcon
-                      icon={faPaperPlane}
+                      icon={faInbox}
                       size={15}
-                      color={Send ? "#007AFF" : "#F2F2F2"}
+                      color={Receive ? "#007AFF" : "#F2F2F2"}
+                    />
+                  </View>
+                </View>
+              )}
+              {Charged && (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    paddingVertical: 4,
+                    paddingHorizontal: 2,
+                    justifyContent: "flex-end",
+                  }}
+                >
+                  <Text size={14} color="#16A34A" bold>
+                    Trasladada
+                  </Text>
+                  <View
+                    style={{
+                      width: 20,
+                      height: 20,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderWidth: 1,
+                      borderRadius: 5,
+                      marginLeft: 4,
+                      borderColor: Receive ? "#16A34A" : "#F2F2F2",
+                    }}
+                  >
+                    <FontAwesomeIcon
+                      icon={faBoxesPacking}
+                      size={15}
+                      color={Receive ? "#16A34A" : "#F2F2F2"}
                     />
                   </View>
                 </View>
@@ -440,17 +480,44 @@ const isMobileLandscape = isMovil && isLandscape;
                   {cleanBodegaName(item.NombreBodegaOrigen)}
                 </Text>
               </View>
-              {Send && (
-                <FontAwesomeIcon
-                  icon={"truck-arrow-right"}
-                  size={24}
-                  color={"#0D7C66"}
-                  style={{ marginHorizontal: 8 }}
-                />
-              )}
+              <View style={{ marginHorizontal: 8 }}>
+                {Charged ? (
+                  // Double check estilo WhatsApp
+                  <View style={{ flexDirection: "row" }}>
+                    <FontAwesomeIcon
+                      icon={"check"}
+                      size={18}
+                      color={"#16A34A"}
+                      style={{ marginRight: -6 }}
+                    />
+                    <FontAwesomeIcon
+                      icon={"check"}
+                      size={18}
+                      color={"#16A34A"}
+                    />
+                  </View>
+                ) : Receive ? (
+                  // Check simple
+                  <FontAwesomeIcon icon={"check"} size={20} color={"#007AFF"} />
+                ) : (
+                  // Default
+                  <FontAwesomeIcon
+                    icon={"truck-arrow-right"}
+                    size={24}
+                    color={"#0D7C66"}
+                  />
+                )}
+              </View>
               <View style={{ flexDirection: "row", alignItems: "center" }}>
                 <Text
-                  style={{ fontSize: 12, color: Send ? "#007AFF" : "#666666" }}
+                  style={{
+                    fontSize: 12,
+                    color: Charged
+                      ? "#16A34A"
+                      : Receive
+                        ? "#007AFF"
+                        : "#0D7C66",
+                  }}
                   numberOfLines={1}
                 >
                   {cleanBodegaName(item.NombreBodegaDestino)}
@@ -458,7 +525,7 @@ const isMobileLandscape = isMovil && isLandscape;
                 <FontAwesomeIcon
                   icon={"location-dot"}
                   size={20}
-                  color={Send ? "#007AFF" : "#666666"}
+                  color={Charged ? "#16A34A" : Receive ? "#007AFF" : "#0D7C66"}
                   style={{ marginLeft: 4 }}
                 />
               </View>
@@ -516,7 +583,7 @@ const isMobileLandscape = isMovil && isLandscape;
       backgroundColor: "white",
     },
     articles: {
-      width: "100%"- theme.SIZES.BASE * 2,
+      width: "100%" - theme.SIZES.BASE * 2,
       paddingVertical: theme.SIZES.BASE,
     },
     floatingButton: {
@@ -675,6 +742,9 @@ const isMobileLandscape = isMovil && isLandscape;
     setCodBodegaDestino(value || null);
   };
 
+  const handlePressRequisition = () => {
+    navigation.navigate("Requisitions");
+  };
   return (
     <ImageBackground source={backgroundImage} style={styles.home}>
       <StatusBar
@@ -709,7 +779,8 @@ const isMobileLandscape = isMovil && isLandscape;
           </Block>
         ) : searchResults.length !== 0 ? (
           <Block style={{ flex: 1, minHeight: 200, paddingHorizontal: 8 }}>
-            <FlashList key={columns}
+            <FlashList
+              key={columns}
               data={searchResults}
               numColumns={columns}
               renderItem={renderItemRequisitions}
@@ -757,186 +828,153 @@ const isMobileLandscape = isMovil && isLandscape;
           </Block>
         )}
       </Block>
-
-     <BlurView
-          intensity={40}
-          tint="dark"
-          style={{
-            position: "absolute",
-            bottom: isMobilePortrait ? 25 : isMobileLandscape ? 25 : 5, // Adjust this value to control the distance from the bottom
-            right: (isMovil && columns === 1) ? undefined : 5,
-            alignSelf: (isMovil && columns === 1) ? "center" : undefined,
-            gap: 4,
-            padding: 12,
-            borderRadius: 30,
-            overflow: "hidden",
-          }}
-        >
-          <View style={{flexDirection: "row", gap: 4 }}>
-            <TouchableOpacity
-              onPress={() => cargarInformacion()}
-              style={{
-                backgroundColor: "#E5E7EB",
-                borderRadius: 25,
-                padding: 8,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <FontAwesomeIcon icon={"retweet"} size={25} color="#374151" />
-              <Text
-                style={{
-                  color: "#374151",
-                  fontSize: 14,
-                  marginLeft: 4,
-                }}
-              >
-                Recargar
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => handlePressNewRequisition()}
-              style={{
-                backgroundColor: "#007AFF",
-                borderRadius: 25,
-                padding: 8,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <FontAwesomeIcon
-                icon={"file-circle-plus"}
-                size={20}
-                color="white"
-              />
-              <Text
-                style={{
-                  color: "white",
-                  fontSize: 14,
-                  marginLeft: 4,
-                }}
-              >
-                Nueva
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => handlePressReceiveRequisition()}
-              style={{
-                backgroundColor: "#FF8F44",
-                borderRadius: 25,
-                padding: 8,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-                shadowColor: "#000",
-                activeOpacity: 0.7,
-shadowOffset: { width: 0, height: 2 },
-shadowOpacity: 0.2,
-shadowRadius: 3,
-elevation: 3,
-              }}
-            >
-              <FontAwesomeIcon icon={"share"} size={20} color="white" />
-              <Text
-                style={{
-                  color: "white",
-                  fontSize: 14,
-                  marginLeft: 4,
-                }}
-              >
-                Recepción
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </BlurView>
-<Modals
-  visible={showFilters}
-  onClose={() => setShowFilters(false)}
-  width={isMovil ? (isLandscape ? "90%" : "95%") : "50%"}
-  height={isMovil ? (isLandscape ? "70%" : "50%") : "60%"}
-  hideFooter
-  fullScreen
->
-  <View
-    style={{
-      flex: 1,
-      padding: 20,
-      justifyContent: "space-between",
-    }}
-  >
-    {/* HEADER */}
-    <Text style={{ fontSize: 18, fontWeight: "bold" }}>
-      Filtrar requisiciones por:
-    </Text>
-
-    {/* FILTROS */}
-    <View style={{ gap: 12 }}>
-      <Select2
-        options={optionsBodegas}
-        value={codBodegaOrigen}
-        setValue={setCodBodegaOrigen}
-        onSelect={handleSelectBodegaOrigen}
-        placeholder="Bodega origen"
-        doneText="Aceptar"
-      />
-
-      <Select2
-        options={optionsBodegas}
-        value={codBodegaDestino}
-        setValue={setCodBodegaDestino}
-        onSelect={handleSelectBodegaDestino}
-        placeholder="Bodega destino"
-        doneText="Aceptar"
-      />
-    </View>
-
-    {/* ACCIONES */}
-    <View style={{ gap: 10 }}>
-      {(codBodegaDestino || codBodegaOrigen) && (
-        <TouchableOpacity
-          onPress={() => {
-            setCodBodegaDestino(null);
-            setCodBodegaOrigen(null);
-            cargarInformacion();
-          }}
-        >
-          <View
+      <BlurView
+        intensity={40}
+        tint="dark"
+        style={{
+          position: "absolute",
+          bottom: isMobilePortrait ? 25 : isMobileLandscape ? 25 : 5, // Adjust this value to control the distance from the bottom
+          right: isMovil && columns === 1 ? undefined : 5,
+          alignSelf: isMovil && columns === 1 ? "center" : undefined,
+          gap: 4,
+          padding: 12,
+          borderRadius: 30,
+          overflow: "hidden",
+        }}
+      >
+        <View style={{ flexDirection: "row", gap: 4 }}>
+          <TouchableOpacity
+            onPress={() => handlePressRequisition()}
             style={{
-              backgroundColor: "#FDECEC",
-              padding: 12,
-              borderRadius: 10,
+              backgroundColor: "#ff8f44",
+              borderRadius: 25,
+              padding: 8,
+              flexDirection: "row",
               alignItems: "center",
+              justifyContent: "center",
             }}
           >
-            <Text style={{ color: "#D32F2F", fontWeight: "bold" }}>
-              Limpiar filtros
+            <FontAwesomeIcon icon={"reply"} size={20} color="white" />
+            <Text
+              style={{
+                color: "white",
+                fontSize: 14,
+                marginLeft: 4,
+              }}
+            >
+              Requisiciones
             </Text>
-          </View>
-        </TouchableOpacity>
-      )}
-
-      <TouchableOpacity onPress={() => setShowFilters(false)}>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => cargarInformacion()}
+            style={{
+              backgroundColor: "#0D7C66",
+              borderRadius: 25,
+              padding: 8,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <FontAwesomeIcon icon={"retweet"} size={25} color="white" />
+            <Text
+              style={{
+                color: "white",
+                fontSize: 14,
+                marginLeft: 4,
+              }}
+            >
+              Recargar
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </BlurView>
+      <Modals
+        visible={showFilters}
+        onClose={() => setShowFilters(false)}
+        width={isMovil ? (isLandscape ? "90%" : "95%") : "50%"}
+        height={isMovil ? (isLandscape ? "70%" : "50%") : "60%"}
+        hideFooter
+        fullScreen
+      >
         <View
           style={{
-            backgroundColor: "#007AFF",
-            padding: 14,
-            borderRadius: 10,
-            alignItems: "center",
+            flex: 1,
+            padding: 20,
+            justifyContent: "space-between",
           }}
         >
-          <Text style={{ color: "white", fontWeight: "bold" }}>
-            Aplicar / Cerrar
+          {/* HEADER */}
+          <Text style={{ fontSize: 18, fontWeight: "bold" }}>
+            Filtrar requisiciones por:
           </Text>
+
+          {/* FILTROS */}
+          <View style={{ gap: 12 }}>
+            <Select2
+              options={optionsBodegas}
+              value={codBodegaOrigen}
+              setValue={setCodBodegaOrigen}
+              onSelect={handleSelectBodegaOrigen}
+              placeholder="Bodega origen"
+              doneText="Aceptar"
+            />
+
+            <Select2
+              options={optionsBodegas}
+              value={codBodegaDestino}
+              setValue={setCodBodegaDestino}
+              onSelect={handleSelectBodegaDestino}
+              placeholder="Bodega destino"
+              doneText="Aceptar"
+            />
+          </View>
+
+          {/* ACCIONES */}
+          <View style={{ gap: 10 }}>
+            {(codBodegaDestino || codBodegaOrigen) && (
+              <TouchableOpacity
+                onPress={() => {
+                  setCodBodegaDestino(null);
+                  setCodBodegaOrigen(null);
+                  cargarInformacion();
+                }}
+              >
+                <View
+                  style={{
+                    backgroundColor: "#FDECEC",
+                    padding: 12,
+                    borderRadius: 10,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ color: "#D32F2F", fontWeight: "bold" }}>
+                    Limpiar filtros
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity onPress={() => setShowFilters(false)}>
+              <View
+                style={{
+                  backgroundColor: "#007AFF",
+                  padding: 14,
+                  borderRadius: 10,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "white", fontWeight: "bold" }}>
+                  Aplicar / Cerrar
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
-      </TouchableOpacity>
-    </View>
-  </View>
-</Modals>
+      </Modals>
       <ToastNotification ref={toastRef} />
     </ImageBackground>
   );
 };
 
-export default Requisitions;
+export default ReceiveRequisitions;

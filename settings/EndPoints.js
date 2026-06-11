@@ -493,8 +493,8 @@ export const ObtenerExistencias = Object.freeze(
   // Endpoints para app de bodega
   export const Login = Object.freeze(
     {
-      EndPoint: `${ServerIp}/api/AppPedidos/Login`,
-      Nombre: `Información de usuario para iniciar sesión`,
+      EndPoint: `${ServerIp}/api/AppBodegas/Login`,
+      Nombre: `Api para iniciar sesión con usuario`,
     },
   );
   export const Pedidos = Object.freeze(

@@ -10,7 +10,7 @@ import {
 const { width, height } = Dimensions.get("screen");
 const Iphone = Platform.OS === "ios";
 //Variable para identificar el tamaño del dispositivo del cual se está accediendo al app
-const isMovil = width < 650 ? true : false;
+const isMovil = Math.min(width, height) < 650 ? true : false;
 
 const CardFlip = ({ front, back }) => {
   const flipAnimation = useRef(new Animated.Value(0)).current;

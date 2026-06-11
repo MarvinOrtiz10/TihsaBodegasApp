@@ -26,7 +26,7 @@ import ToastNotification from "../../components/ToastNotification";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { BlurView } from "expo-blur";
 //Variable para identificar el tamaño del dispositivo del cual se está accediendo al app
-const isMovil = width < 650 ? true : false;
+const isMovil = Math.min(width, height) < 650 ? true : false;
 //Variable para identificar el sistema operativo del dispositivo del cual se está accediendo al app
 const Iphone = Platform.OS === "ios" ? true : false;
 const paddingTopNotification = Iphone ? 55 : 40;
@@ -478,8 +478,8 @@ const PasswordForgot = () => {
 const styles = StyleSheet.create({
   home: {
     flex: 1,
-    height: height,
-    width: width,
+    height: "100%",
+    width: "100%",
     backgroundColor: "white",
   },
   formContainer: {
@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
   },
   createButton: {
-    width: width * 0.7,
+    width: "70%",
     marginTop: 25,
     borderRadius: 25,
     height: isMovil ? 45 : 50,

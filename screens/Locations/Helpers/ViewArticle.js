@@ -1,74 +1,32 @@
-import React, { useEffect, useState } from "react";
-import { Text, theme } from "galio-framework";
+import React, { useEffect, useState,useRef } from "react";
+import { Text } from "galio-framework";
 import {
+  ActivityIndicator,
   Dimensions,
-  FlatList,
   ImageBackground,
   Image,
   Platform,
   StyleSheet,
   View,
+  TouchableOpacity,
+  InteractionManager,
+  useWindowDimensions,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
-import { ArticlesImages } from "../../../../settings/EndPoints.js";
+import { ArticlesImages } from "../../../settings/EndPoints.js";
 import Carousel from "react-native-reanimated-carousel";
 import axios from "axios";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
-import { Parser } from "htmlparser2";
+import InputAutoGrowing from "../../../components/InputAutoGrowing.js";
+import { faFloppyDisk } from "@fortawesome/free-solid-svg-icons";
 
-const { width, height } = Dimensions.get("screen");
-//Variable para identificar el tamaño del dispositivo del cual se está accediendo al app
-const isMovil = Math.min(width, height) < 650 ? true : false;
 const Iphone = Platform.OS === "ios" ? true : false;
 
-const convertTextToList = (htmlText) => {
-  const isHTML = /<[a-z][\s\S]*>/i.test(htmlText.trim());
+const RenderViewArticle = ({ articulo, onSaveLocation, loading, onScanLocation }) => {
+  const { width, height } = useWindowDimensions();
+  const isMovil = Math.min(width, height) < 650;
+  const isLandscape = width > height;
 
-  if (htmlText.trim() === "") {
-    return []; // Retorna un array vacío si el string es vacío
-  }
-
-  const listItems = [];
-  let currentText = "";
-  let inLiTag = false;
-
-  if (isHTML) {
-    const parser = new Parser(
-      {
-        onopentag(name) {
-          if (name === "li") {
-            inLiTag = true;
-          }
-        },
-        ontext(text) {
-          if (inLiTag) {
-            currentText += text.trim() + " ";
-          }
-        },
-        onclosetag(name) {
-          if (name === "li") {
-            if (currentText.trim()) {
-              listItems.push(currentText.trim());
-              currentText = "";
-            }
-            inLiTag = false;
-          }
-        },
-      },
-      { decodeEntities: true }
-    );
-
-    parser.write(htmlText);
-    parser.end();
-  } else {
-    // Si no es HTML, devuelve el texto en un array
-    return [htmlText.trim()];
-  }
-
-  return listItems;
-};
-
-const RenderViewArticle = ({ articulo }) => {
   const {
     Linea,
     Codigo,
@@ -76,7 +34,7 @@ const RenderViewArticle = ({ articulo }) => {
     NombreArticulo,
     Descripcion,
     Precio,
-    MasterPack,
+    Ubicacion,
     Sustituto,
     Inactivo,
     Descontinuado,
@@ -86,15 +44,18 @@ const RenderViewArticle = ({ articulo }) => {
   const [listItems, setListItems] = useState([]);
   const [fotosArticulo, setFotosArticulo] = useState([]);
   const [existenciaBodegas, setExistenciaBodegas] = useState([]);
+  const [ubicacion, setUbicacion] = useState(articulo?.Ubicacion || "");
+  const ubicacionRef = useRef(null);
 
   useEffect(() => {
-    setListItems(convertTextToList(Descripcion));
-
     axios.get(`${baseUrlImagesArticle}/${Codigo}`).then((response) => {
       const respuesta = response.data;
       setFotosArticulo(respuesta.Imagenes);
       setExistenciaBodegas(respuesta.Existencias);
     });
+    InteractionManager.runAfterInteractions(() => {
+                  ubicacionRef.current?.focus();
+                });
   }, []);
 
   const renderModalProducts = ({ item }) => {
@@ -129,6 +90,183 @@ const RenderViewArticle = ({ articulo }) => {
       currency: currencyCode,
     });
   }
+  const styles = StyleSheet.create({
+  productPrice: {
+    fontSize: isMovil ? 16 : 20,
+    paddingVertical: 0,
+  },
+  column: { flex: 1, flexGrow: 1, paddingVertical: 8 },
+  column0: {
+    backgroundColor: "#007AFF",
+    borderRadius: 10,
+  },
+  column1: { backgroundColor: "#64C3ED", paddingVertical: 5 },
+  column2: {
+    backgroundColor: "#C6EFF9",
+    paddingVertical: 5,
+  },
+  text0: { color: "white", fontSize: Iphone ? 16 : 14 },
+  text1: { color: "white", fontSize: Iphone ? 16 : 14 },
+  text2: { color: "black", fontSize: Iphone ? 16 : 14 },
+  soldOutFlagContainer: {
+    width: 150,
+    position: "absolute",
+    top: 0,
+    left: 0,
+    backgroundColor: "rgba(255, 0, 0, 0.6)", // Fondo rojo con transparencia
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 5,
+    alignItems: "center",
+  },
+  soldOutFlagText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  indicatorContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 10,
+  },
+  indicatorWrapper: {
+    marginHorizontal: 5,
+  },
+  indicator: {
+    width: 30,
+    height: 2,
+    borderRadius: 2,
+  },
+  profileCard: {
+    flex: 1,
+    zIndex: 2,
+    width: "100%",
+  },
+  modalCodigo: {
+    fontSize: isMovil ? 16 : 16,
+    color: "black",
+    marginRight: 5,
+  },
+  info: {
+    paddingHorizontal: 10,
+  },
+  divider: {
+    width: "98%",
+    borderWidth: 1,
+    borderColor: "#E9ECEF",
+  },
+  blockContainerCategories: {
+    backgroundColor: "white",
+    width: "100%",
+    minWidth: width - 10,
+    height: isMovil ? 260 : 350,
+    maxHeight: isMovil ? 260 : 350,
+    paddingHorizontal: 16,
+  },
+  modalFotoContainer: {
+    flex: 1,
+    height: "100%",
+  },
+  modalFotoArticulo: {
+    width: "100%",
+    height: "100%",
+  },
+  nameInfo: {
+    marginTop: 20,
+    paddingHorizontal: 8,
+  },
+  modalDescriptionArticulo: {
+    fontSize: isMovil ? 12 : 16,
+  },
+  modalLineaArticulo: {
+    fontSize: isMovil ? 16 : 16,
+  },
+  inactiveFlag: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 0, 0, 0.6)", // Fondo rojo semitransparente
+    color: "white",
+    fontWeight: "bold",
+    padding: 10,
+    borderRadius: 5,
+    zIndex: 10, // Asegura que esté por encima de otros elementos
+    marginBottom: 3,
+  },
+  discontinuateFlag: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 165, 0, 0.9)", // Fondo rojo semitransparente
+    color: "white",
+    fontWeight: "bold",
+    padding: 10,
+    borderRadius: 5,
+    zIndex: 10, // Asegura que esté por encima de otros elementos
+  },
+  modalCodigo: {
+    fontSize: isMovil ? 16 : 16,
+    color: "black",
+    marginBottom: 10,
+  },
+  tableContainer: {
+    borderWidth: 1,
+    borderColor: "#D9F2EC",
+    borderRadius: 5,
+    overflow: "hidden",
+  },
+  headerRow: {
+    flexDirection: "row",
+    backgroundColor: "#D9F2EC", //"#f2f2f2",
+    paddingVertical: isMovil?4:8,
+  },
+  headerCell: {
+    flex: 1,
+    fontWeight: "bold",
+    textAlign: "center",
+    color: "#0D7C66",
+    fontSize: isMovil?12:14,
+  },
+  row: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "#D9F2EC",
+    paddingVertical: isMovil?4:8,
+  },
+  cell: {
+    flex: 1,
+    textAlign: "center",
+    fontSize: isMovil?12:14,
+  },
+  required: {
+    marginTop: -8,
+    fontSize: 10,
+    color: "red",
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 2,
+  },
+  locationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  locationInputWrapper: {
+    flex: 1,
+  },
+  locationScanButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#D9F2EC",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 8,
+    borderWidth: 1,
+    borderColor: "#0D7C66",
+  },
+});
   return (
     <View style={styles.profileCard}>
       <KeyboardAwareScrollView
@@ -137,15 +275,20 @@ const RenderViewArticle = ({ articulo }) => {
         }}
         enableOnAndroid
       >
-        <View style={{ flexDirection: "row" }}>
-          <View style={{ flex: 1, alignItems: "center" }}>
+        <View
+          style={{
+            flexDirection: isMovil && !isLandscape ? "column" : "row",
+            paddingBottom: 20,
+          }}
+        >
+          <View style={{ flex: 1, alignItems: "center", marginBottom: isMovil && !isLandscape ? 15 : 0 }}>
             {fotosArticulo.length > 1 ? (
               <>
                 <Carousel
                   data={fotosArticulo}
                   renderItem={renderModalProducts}
-                  width={isMovil ? (Iphone ? 250 : 250) : 250}
-                  height={isMovil ? (Iphone ? 250 : 250) : 250}
+                  width={isMovil ? (isLandscape ? 200 : 150) : 250}
+                  height={isMovil ? (isLandscape ? 200 : 150) : 250}
                   sliderWidth={width - 20} // El ancho total del carrusel (ajustar según tus necesidades)
                   itemWidth={width} // El ancho de cada elemento dentro del carrusel (ajustar según tus necesidades)
                   activeSlideAlignment={"start"}
@@ -228,7 +371,7 @@ const RenderViewArticle = ({ articulo }) => {
                     fontWeight: "bold",
                   }}
                 >
-                  [{Codigo}]
+                  [{Codigo}] {" "}
                 </Text>
                 {NombreArticulo}
               </Text>
@@ -242,7 +385,13 @@ const RenderViewArticle = ({ articulo }) => {
                 <Text
                   style={[
                     styles.modalLineaArticulo,
-                    { color: "#007AFF", textAlign: "left", marginTop: 0, fontWeight:"bold", fontSize: 20 },
+                    {
+                      color: "#0D7C66",
+                      textAlign: "left",
+                      marginTop: 0,
+                      fontWeight: "bold",
+                      fontSize: 20,
+                    },
                   ]}
                 >
                   {formatCurrency(Precio, "GTQ")}
@@ -273,40 +422,71 @@ const RenderViewArticle = ({ articulo }) => {
               <View style={styles.divider} />
             </View>
             <View style={{ paddingHorizontal: 8 }}>
-              <Text style={styles.modalLineaArticulo}>
-                Linea:
-                <Text
-                  style={[
-                    styles.modalLineaArticulo,
-                    { color: "#525F7F", textAlign: "left", marginTop: 0 },
-                  ]}
+              <Text style={styles.label}>Ubicación:</Text>
+              <View style={styles.locationRow}>
+                <View style={styles.locationInputWrapper}>
+                  <InputAutoGrowing
+                    iconContent={<View />}
+                    returnKeyType="done"
+                    placeholder="Ubicación"
+                    value={ubicacion}
+                    onChangeText={setUbicacion}
+                    editable={true}
+                    ref={ubicacionRef}
+                    selectTextOnFocus={true}
+                    onSubmitEditing={(e) => onSaveLocation(e.nativeEvent.text)}            
+                  />
+                </View>
+                {onScanLocation && (
+                  <TouchableOpacity
+                    style={styles.locationScanButton}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      onScanLocation("location", (scannedData) => {
+                        setUbicacion(scannedData);
+                        // Simular Enter del handheld: guardar automáticamente
+                        onSaveLocation(scannedData);
+                      });
+                    }}
+                  >
+                    <FontAwesomeIcon icon={"qrcode"} size={18} color="#0D7C66" />
+                  </TouchableOpacity>
+                )}
+              </View>
+              {ubicacion == "" ? (
+                <Text style={styles.required}>* Obligatorio</Text>
+              ): loading ? (
+                <ActivityIndicator size="large" color="#0D7C66" />
+              ) : (
+                <TouchableOpacity
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    backgroundColor: "#0D7C66",
+                    paddingVertical: 10,
+                    paddingHorizontal: 20,
+                    borderRadius: 5,
+                  }}
+                  onPress={() => onSaveLocation(ubicacion)}
                 >
-                  {Linea}
-                </Text>
-              </Text>
-            </View>
-
-            <View middle style={{ marginTop: 10, marginBottom: 10 }}>
-              <View style={styles.divider} />
-            </View>
-            <View style={{ paddingHorizontal: 8 }}>
-              <Text style={styles.modalLineaArticulo}>
-                Master Pack:
-                <Text
-                  style={[
-                    styles.modalLineaArticulo,
-                    { color: "#525F7F", textAlign: "left", marginTop: 0 },
-                  ]}
-                >
-                  {MasterPack}
-                </Text>
-              </Text>
+                  <FontAwesomeIcon
+                    icon={faFloppyDisk}
+                    color="white"
+                    size={16}
+                    style={{ marginRight: 5 }}
+                  />
+                  <Text style={{ color: "white", fontWeight: "bold" }}>
+                    Guardar Ubicación
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </View>
-        <View style={{flex: 1,}}>
+        <View style={{ flex: 1 }}>
           {existenciaBodegas.length !== 0 && (
-            <View style={{flex: 1,}}>
+            <View style={{ flex: 1 }}>
               <View middle style={{ marginTop: 10, marginBottom: 10 }}>
                 <View style={styles.divider} />
               </View>
@@ -374,150 +554,5 @@ const RenderViewArticle = ({ articulo }) => {
     </View>
   );
 };
-const styles = StyleSheet.create({
-  productPrice: {
-    fontSize: isMovil ? 16 : 20,
-    paddingVertical: 0,
-  },
-  column: { flex: 1, flexGrow: 1, paddingVertical: 8 },
-  column0: {
-    backgroundColor: "#007AFF",
-    borderRadius: 10,
-  },
-  column1: { backgroundColor: "#64C3ED", paddingVertical: 5 },
-  column2: {
-    backgroundColor: "#C6EFF9",
-    paddingVertical: 5,
-  },
-  text0: { color: "white", fontSize: Iphone ? 16 : 14 },
-  text1: { color: "white", fontSize: Iphone ? 16 : 14 },
-  text2: { color: "black", fontSize: Iphone ? 16 : 14 },
-  soldOutFlagContainer: {
-    width: 150,
-    position: "absolute",
-    top: 0,
-    left: 0,
-    backgroundColor: "rgba(255, 0, 0, 0.6)", // Fondo rojo con transparencia
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 5,
-    alignItems: "center",
-  },
-  soldOutFlagText: {
-    color: "white",
-    fontSize: 12,
-    fontWeight: "bold",
-  },
-  indicatorContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: 10,
-  },
-  indicatorWrapper: {
-    marginHorizontal: 5,
-  },
-  indicator: {
-    width: 30,
-    height: 2,
-    borderRadius: 2,
-  },
-  profileCard: {
-    flex: 1,
-    zIndex: 2,
-    width: "100%",
-  },
-  modalCodigo: {
-    fontSize: isMovil ? 16 : 16,
-    color: "black",
-    marginRight: 5,
-  },
-  info: {
-    paddingHorizontal: 10,
-  },
-  divider: {
-    width: "98%",
-    borderWidth: 1,
-    borderColor: "#E9ECEF",
-  },
-  blockContainerCategories: {
-    backgroundColor: "white",
-    width: "100%",
-    minWidth: width - 10,
-    height: isMovil ? 260 : 350,
-    maxHeight: isMovil ? 260 : 350,
-    paddingHorizontal: 16,
-  },
-  modalFotoContainer: {
-    flex: 1,
-    height: 250,
-  },
-  modalFotoArticulo: {
-    width: 250,
-    height: 250,
-  },
-  nameInfo: {
-    marginTop: 20,
-    paddingHorizontal: 8,
-  },
-  modalDescriptionArticulo: {
-    fontSize: isMovil ? 12 : 16,
-  },
-  modalLineaArticulo: {
-    fontSize: isMovil ? 16 : 16,
-  },
-  inactiveFlag: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 0, 0, 0.6)", // Fondo rojo semitransparente
-    color: "white",
-    fontWeight: "bold",
-    padding: 10,
-    borderRadius: 5,
-    zIndex: 10, // Asegura que esté por encima de otros elementos
-    marginBottom: 3,
-  },
-  discontinuateFlag: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(255, 165, 0, 0.9)", // Fondo rojo semitransparente
-    color: "white",
-    fontWeight: "bold",
-    padding: 10,
-    borderRadius: 5,
-    zIndex: 10, // Asegura que esté por encima de otros elementos
-  },
-  modalCodigo: {
-    fontSize: isMovil ? 16 : 16,
-    color: "black",
-    marginBottom: 10,
-  },
-  tableContainer: {
-    borderWidth: 1,
-    borderColor: "#DBEAFE",
-    borderRadius: 5,
-    overflow: "hidden",
-  },
-  headerRow: {
-    flexDirection: "row",
-    backgroundColor: "#DBEAFE",//"#f2f2f2",
-    paddingVertical: 8,
-  },
-  headerCell: {
-    flex: 1,
-    fontWeight: "bold",
-    textAlign: "center",
-    color:"#007AFF"
-  },
-  row: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#DBEAFE",
-    paddingVertical: 8,
-  },
-  cell: {
-    flex: 1,
-    textAlign: "center",
-  },
-});
+
 export default RenderViewArticle;

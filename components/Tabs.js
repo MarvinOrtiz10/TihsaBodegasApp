@@ -103,7 +103,7 @@ const Tabs = ({ data = defaultMenu, initialIndex = null, onChange }) => {
 
 const styles = StyleSheet.create({
   container: {
-    width: width,
+    width: "100%",
     backgroundColor: theme.COLORS.WHITE,
     zIndex: 2,
   },

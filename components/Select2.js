@@ -18,6 +18,7 @@ const Select2 = ({
   success,
   value,
   setValue,
+  disabled,
 }) => {
   const [open, setOpen] = useState(false);
 
@@ -52,6 +53,7 @@ const Select2 = ({
         setValue={setValue} // 🔥 directo
         onChangeValue={handleChange} // 🔥 aquí reaccionas
         placeholder={placeholder || "Select..."}
+        disabled={disabled} // 👈 aquí
         style={[styles.input, success && styles.success, error && styles.error]}
         textStyle={[styles.textInput, textStyle]}
         dropDownContainerStyle={styles.dropdown}

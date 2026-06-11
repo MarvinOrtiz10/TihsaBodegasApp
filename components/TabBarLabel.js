@@ -2,7 +2,7 @@ import React from "react";
 import { Dimensions, Platform, View, Text, StyleSheet } from "react-native";
 const { width, height } = Dimensions.get("screen");
 //Variable para identificar el tamaño del dispositivo del cual se está accediendo al app
-const isMovil = width < 650 ? true : false;
+const isMovil = Math.min(width, height) < 650 ? true : false;
 //Variable para identificar el sistema operativo del dispositivo del cual se está accediendo al app
 const Iphone = Platform.OS === "ios" ? true : false;
 const CustomTabBarLabel = ({ label, focused }) => {

@@ -7,6 +7,7 @@ import {
   Platform,
   StyleSheet,
   View,
+  useWindowDimensions,
 } from "react-native";
 import InputSpinner from "react-native-input-spinner";
 import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
@@ -14,12 +15,14 @@ import { ArticlesImages } from "../../settings/EndPoints.js";
 import Carousel from "react-native-reanimated-carousel";
 import axios from "axios";
 
-const { width } = Dimensions.get("screen");
+const { width, height } = Dimensions.get("screen");
 //Variable para identificar el tamaño del dispositivo del cual se está accediendo al app
-const isMovil = width < 650 ? true : false;
+const isMovil = Math.min(width, height) < 650 ? true : false;
 const Iphone = Platform.OS === "ios" ? true : false;
 
 const RenderEditArticle = ({ articulo, cantidad, onCantidadChange }) => {
+  const { width: currentWidth, height: currentHeight } = useWindowDimensions();
+  const isLandscape = currentWidth > currentHeight;
   const { Codigo, Foto, NombreArticulo, Existencia, Costo } = articulo;
   const baseUrlImagesArticle = ArticlesImages.EndPoint;
   const [activeImageSlide, setActiveImageSlide] = useState(0);
@@ -154,12 +157,12 @@ const RenderEditArticle = ({ articulo, cantidad, onCantidadChange }) => {
       width: "100%",
     },
     fotoContainerPromotion: {
-      width: isMovil ? (Iphone ? 250 : 200) : 400,
-      height: isMovil ? (Iphone ? 250 : 200) : 400,
+      width: isMovil ? (isLandscape ? 140 : 180) : 300,
+      height: isMovil ? (isLandscape ? 140 : 180) : 300,
     },
     fotoPromotion: {
-      width: isMovil ? (Iphone ? 250 : 200) : 400,
-      height: isMovil ? (Iphone ? 250 : 200) : 400,
+      width: isMovil ? (isLandscape ? 140 : 180) : 300,
+      height: isMovil ? (isLandscape ? 140 : 180) : 300,
     },
     titlePromotionContainer: {
       justifyContent: "center",
@@ -195,11 +198,11 @@ const RenderEditArticle = ({ articulo, cantidad, onCantidadChange }) => {
     },
     modalFotoContainer: {
       flex: 1,
-      height: isMovil ? (Iphone ? 250 : 200) : 200,
+      height: isMovil ? (isLandscape ? 140 : 180) : 300,
     },
     modalFotoArticulo: {
-      width: isMovil ? (Iphone ? 250 : 200) : 200,
-      height: isMovil ? (Iphone ? 250 : 200) : 200,
+      width: isMovil ? (isLandscape ? 140 : 180) : 300,
+      height: isMovil ? (isLandscape ? 140 : 180) : 300,
     },
     nameInfo: {
       paddingVertical: 8,
@@ -255,8 +258,8 @@ const RenderEditArticle = ({ articulo, cantidad, onCantidadChange }) => {
               <Carousel
                 data={fotosArticulo}
                 renderItem={renderModalProducts}
-                width={isMovil ? (Iphone ? 250 : 200) : 200}
-                height={isMovil ? (Iphone ? 250 : 200) : 200}
+                width={isMovil ? (isLandscape ? 140 : 180) : 300}
+                height={isMovil ? (isLandscape ? 140 : 180) : 300}
                 sliderWidth={"100%"} // El ancho total del carrusel (ajustar según tus necesidades)
                 itemWidth={"100%"} // El ancho de cada elemento dentro del carrusel (ajustar según tus necesidades)
                 activeSlideAlignment={"start"}

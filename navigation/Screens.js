@@ -9,13 +9,16 @@ import Login from "../screens/Login/Login";
 import PasswordForgot from "../screens/Login/PasswordForgot";
 import { Provider } from "react-redux";
 import AppSettings from "../screens/Settings/AppSettings.js";
-import CheckinOrder from "../screens/Orders/Picking/CheckinOrder.js";
+import PickingOrder from "../screens/Orders/Picking/PickingOrder.js";
 import PackingOrder from "../screens/Orders/Packing/PackingOrder.js";
 import OrdersPacking from "../screens/Orders/Packing/Orders.js";
 import PickingOrders from "../screens/Orders/Picking/Orders.js";
 import Requisitions from "../screens/Requisitions/Requisitions.js";
 import PickingRequisition from "../screens/Requisitions/PickingRequisition.js";
 import NewPickingRequisition from "../screens/Requisitions/NewPickingRequisition.js";
+import Articles from "../screens/Locations/Articles.js";
+import ReceiveRequisitions from "../screens/Requisitions/Receive/ReceiveRequisitions.js";
+import PackingReceiveRequisition from "../screens/Requisitions/Receive/PackingReceiveRequisition.js";
 
 const Stack = createStackNavigator();
 
@@ -62,12 +65,15 @@ const MainTabScreen = () => {
       }}
     />
     <Stack.Screen name="Orders Picking" component={PickingOrders} />
-    <Stack.Screen name="Picking Order" component={CheckinOrder} />
+    <Stack.Screen name="Picking Order" component={PickingOrder} />
     <Stack.Screen name="Orders Packing" component={OrdersPacking} />    
     <Stack.Screen name="Packing Order" component={PackingOrder} />  
     <Stack.Screen name="Requisitions" component={Requisitions} /> 
-    <Stack.Screen name="Picking requisition" component={PickingRequisition} />  
-    <Stack.Screen name="New Picking requisition" component={NewPickingRequisition} />
+    <Stack.Screen name="Receive Requisitions" component={ReceiveRequisitions} />     
+    <Stack.Screen name="Picking Requisition" component={PickingRequisition} />  
+    <Stack.Screen name="New Picking Requisition" component={NewPickingRequisition} />
+    <Stack.Screen name="Packing Receive Requisition" component={PackingReceiveRequisition} />  
+    <Stack.Screen name="Location Articles" component={Articles} /> 
     <Stack.Screen name="App Settings" component={AppSettings} />  
   </Stack.Navigator>
   );

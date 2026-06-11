@@ -36,7 +36,7 @@ import { useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 //Variable para identificar el tamaño del dispositivo del cual se está accediendo al app
-const isMovil = width < 650 ? true : false;
+const isMovil = Math.min(width, height) < 650 ? true : false;
 //Variable para identificar el sistema operativo del dispositivo del cual se está accediendo al app
 const Iphone = Platform.OS === "ios" ? true : false;
 const columns = isMovil ? 2 : 5;
@@ -60,7 +60,7 @@ const ConsultArticles = () => {
   const [showClearIcon, setShowClearIcon] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const flatListRef = useRef(null);
-  const numColumns = width > 650 ? 3 : 2;
+  const numColumns = isMovil ? (width > height ? 2 : 1) : 3;
   //Variables para el artículo
   const [article, setArticle] = useState({});
   const [backgroundImage, setBackgroundImage] = useState(
@@ -208,14 +208,14 @@ const ConsultArticles = () => {
         hidden={false}
       />
       {renderHeader()}
-      <View style={{ flex: 1, width: width, backgroundColor: "white" }}>
+      <View style={{ flex: 1, width: "100%", backgroundColor: "white" }}>
         {renderSearch()}
 
         {loadingAllArticles ? (
           <View
             style={{
               flex: 1,
-              width: width,
+              width: "100%",
               backgroundColor: "white",
               paddingVertical: 48,
             }}
@@ -246,7 +246,7 @@ const ConsultArticles = () => {
                 paddingHorizontal: 16,
                 backgroundColor: "white",
                 borderRadius: 10,
-                height: height * 0.5,
+                height: "50%",
               }}
             >
               <Text
@@ -281,13 +281,13 @@ const ConsultArticles = () => {
 const styles = StyleSheet.create({
   home: {
     flex: 1,
-    height: height,
-    width: width,
+    height: "100%",
+    width: "100%",
     backgroundColor: "white",
   },
   search: {
     height: 48,
-    width: width - 32,
+    width: "100%"- 32,
     marginHorizontal: 16,
     borderRadius: 25,
     borderColor: argonTheme.COLORS.BORDER,
@@ -319,7 +319,7 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderTopEndRadius: 40,
     borderTopStartRadius: 40,
-    width: width,
+    width: "100%",
     alignItems: "center", // Cambiado a "center" en lugar de "flex-start"
     marginBottom: 0,
     height: Iphone ? height - 55 : height - 100,

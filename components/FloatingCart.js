@@ -73,7 +73,7 @@ const FloatingCartButton = ({ navigation }) => {
           <Block>
             <Text style={styles.buttonHeaderText}>Ver el carrito</Text>
             <Text style={styles.buttonText}>
-              Tienes {cartItems}{" "}
+              Tienes {cartItems}
               {cartItems > 1 ? "artículos agregados" : "artículo agregado"}
             </Text>
           </Block>
@@ -94,7 +94,7 @@ const FloatingCartButton = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    width: width,
+    width: "100%",
     justifyContent: "center",
     alignItems: "center",
     position: "absolute",

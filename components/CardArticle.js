@@ -3,7 +3,7 @@ import { StyleSheet, Image, Dimensions, View } from "react-native";
 import { Block, Text, theme } from "galio-framework";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 const { width, height } = Dimensions.get("screen");
-const isMovil = width < 650 ? true : false;
+const isMovil = Math.min(width, height) < 650 ? true : false;
 const Card = memo(({ navigation, item }) => {
   function formatCurrency(amount, currencyCode) {
     if (typeof amount !== "number") {
@@ -27,10 +27,35 @@ const Card = memo(({ navigation, item }) => {
           <Text size={12} numberOfLines={3}>
             {item.Codigo} - {item.NombreArticulo}
           </Text>
-          <Text size={11}>
-            Existencia: {item.Existencia} | Costo:{" "}
-            {formatCurrency(item.Costo ?? 0, "GTQ")}
-          </Text>
+          {item.Existencia === 0 ? (
+            <View
+              style={{
+                flexDirection: "row",
+                backgroundColor: "#EF4444", // rojo moderno
+                paddingVertical: 2,
+                paddingHorizontal: 4,
+                borderRadius: 4,
+                alignSelf: "flex-start",
+                justifyContent: "center",
+                alignItems: "center",
+                marginTop: 2,
+                gap: 2,
+              }}
+            >
+              <FontAwesomeIcon
+                icon="ban"
+                color="white"
+                size={11}
+              />
+              <Text style={{ color: "white", fontSize: 11 }}>Agotado</Text>
+            </View>
+          ) : (
+            <Text size={11}>
+              Existencia: {item.Existencia} | Costo:
+              {formatCurrency(item.Costo ?? 0, "GTQ")}
+            </Text>
+          )}
+
           {item.AlreadyAdded && (
             <View
               style={{
@@ -45,8 +70,10 @@ const Card = memo(({ navigation, item }) => {
                 gap: 2,
               }}
             >
-              <FontAwesomeIcon icon='clipboard-check' color="white" size={11} />
-              <Text style={{ color: "white", fontSize: 12 }}>En requisición</Text>
+              <FontAwesomeIcon icon="clipboard-check" color="white" size={11} />
+              <Text style={{ color: "white", fontSize: 12 }}>
+                En requisición
+              </Text>
             </View>
           )}
         </Block>

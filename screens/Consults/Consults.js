@@ -17,7 +17,7 @@ import { useNavigation } from "@react-navigation/native";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { Images } from "../../constants/index.js";
 //Variable para identificar el tamaño del dispositivo del cual se está accediendo al app
-const isMovil = width < 650 ? true : false;
+const isMovil = Math.min(width, height) < 650 ? true : false;
 //Variable para identificar el sistema operativo del dispositivo del cual se está accediendo al app
 const Iphone = Platform.OS === "ios" ? true : false;
 
@@ -40,7 +40,7 @@ const Consults = () => {
         <KeyboardAwareScrollView
           contentContainerStyle={{
             flexGrow: 1,
-            width: width,
+            width: "100%",
             paddingBottom: Iphone ? 80 : 150,
           }}
           enableOnAndroid
@@ -298,8 +298,8 @@ const Consults = () => {
 const styles = StyleSheet.create({
   home: {
     flex: 1,
-    height: height,
-    width: width,
+    height: "100%",
+    width: "100%",
     backgroundColor: "white",
   },
 });

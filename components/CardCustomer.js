@@ -4,8 +4,8 @@ import { Block, Text, theme } from "galio-framework";
 import { FontAwesomeIcon } from "@fortawesome/react-native-fontawesome";
 import { faUserEdit } from "@fortawesome/free-solid-svg-icons";
 
-const { width } = Dimensions.get("screen");
-const isMovil = width < 650;
+const { width, height } = Dimensions.get("screen");
+const isMovil = Math.min(width, height) < 650;
 
 const CardCustomer = memo(({ navigation, item, style }) => {
   const cardContainer = [styles.card, styles.shadow, style];

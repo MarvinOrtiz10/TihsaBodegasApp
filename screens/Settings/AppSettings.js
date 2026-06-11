@@ -42,7 +42,7 @@ import {
   useClearByFocusCell,
 } from "react-native-confirmation-code-field";
 //Variable para identificar el tamaño del dispositivo del cual se está accediendo al app
-const isMovil = width < 650 ? true : false;
+const isMovil = Math.min(width, height) < 650 ? true : false;
 //Variable para identificar el sistema operativo del dispositivo del cual se está accediendo al app
 const Iphone = Platform.OS === "ios" ? true : false;
 const paddingTopNotification = Iphone ? 55 : 40;
@@ -352,7 +352,7 @@ const AppSettings = () => {
         hidden={false}
       />
       {renderHeader()}
-      <View style={{ flex: 1, width: width, backgroundColor: "white" }}>
+      <View style={{ flex: 1, width: "100%", backgroundColor: "white" }}>
         <View
           style={{
             flexDirection: "row",
@@ -693,8 +693,8 @@ const AppSettings = () => {
 const styles = StyleSheet.create({
   home: {
     flex: 1,
-    height: height,
-    width: width,
+    height: "100%",
+    width: "100%",
     backgroundColor: "white",
   },
   search: {
@@ -945,7 +945,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FED30B",
     borderRadius: 50,
     height: 50,
-    width: width * 0.9,
+    width: "90%",
   },
   textRequestButton: {
     color: "white", //"#00296b",
@@ -960,7 +960,7 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: 8,
     padding: 16,
-    width: width - 20,
+    width: "100%"- 20,
     height: 100,
   },
 
@@ -990,7 +990,7 @@ const styles = StyleSheet.create({
 
   button: {
     marginBottom: theme.SIZES.BASE,
-    //width: width - theme.SIZES.BASE * 2,
+    //width: "100%"- theme.SIZES.BASE * 2,
   },
   modalHeaderTitle: {
     fontSize: 18,

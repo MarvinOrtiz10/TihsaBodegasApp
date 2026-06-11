@@ -7,9 +7,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
+  useWindowDimensions,
 } from "react-native";
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get("screen");
 const Iphone = Platform.OS === "ios" ? true : false;
 
 const Modals = ({
@@ -23,6 +23,7 @@ const Modals = ({
   hideFooter = false,
   fullScreen = false,
 }) => {
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -44,14 +45,12 @@ const Modals = ({
   if (!visible) return null;
 
   return (
-    <Animated.View style={[styles.overlay, { opacity: opacityAnim, height: fullScreen ? screenHeight : Iphone ? screenHeight : screenHeight * 0.94, }]}>
+    <Animated.View style={[styles.overlay, { width: screenWidth, opacity: opacityAnim, height: fullScreen ? screenHeight : Iphone ? screenHeight : screenHeight * 0.94, }]}>
       <View style={[styles.modalContent, { width, height }]}>
         {!hideHeader && (
           <View style={[styles.modalHeader, { height: "10%" }]}>
             <View style={{ width: "33%" }}></View>
-            <View style={{ width: "33%", alignItems: "center" }}>
-              <View style={styles.line}></View>
-            </View>
+            <View style={{ width: "33%", alignItems: "center" }}></View>
             <TouchableOpacity
               style={[styles.circleCloseButton, styles.elementoDerecha]}
               onPress={onClose}
@@ -99,7 +98,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.8)",
     alignItems: "center",
     justifyContent: "center",
-    width: screenWidth,
     //height: Iphone ? screenHeight : screenHeight * 0.94,
     padding: 5,
     paddingBottom: 10,
