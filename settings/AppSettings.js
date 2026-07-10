@@ -4,6 +4,6 @@ export const Server = Object.freeze({
 });
 
 export const AppVersion = Object.freeze({
-  Version: "1.2.3",
+  Version: "1.2.4",
   Build: 10
 });

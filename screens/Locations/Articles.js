@@ -69,6 +69,8 @@ const Articles = () => {
     data: dataAllArticles,
     error: errorAllArticles,
     isLoading: loadingAllArticles,
+    isFetching,
+    refetch,
   } = useGetAllArticlesQuery({ codBodega });
   const toastRef = useRef(null);
   const [modal, setModal] = useState(false);
@@ -132,6 +134,7 @@ const Articles = () => {
     loadBackground();
     refocusScanBar();
   }, []);
+
   useEffect(() => {
     if (dataAllArticles) {
       var response = dataAllArticles;
@@ -148,6 +151,16 @@ const Articles = () => {
       }
     }
   }, [dataAllArticles]);
+  const handleRefresh = async () => {
+  try {
+    setLoading(true);
+    await refetch();
+  } catch (error) {
+    console.log(error);
+  } finally {
+    setLoading(false);
+  }
+};
   const refocusScanBar = () => {
     InteractionManager.runAfterInteractions(() => {
       scanBarRef.current?.focus();
@@ -597,7 +610,7 @@ const Articles = () => {
     },
     cameraBottomLabel: {
       color: "rgba(255,255,255,0.75)",
-      
+
       fontWeight: "500",
     },
     cameraCancelBtn: {
@@ -704,7 +717,7 @@ const Articles = () => {
       <View style={{ flex: 1, width: "100%", backgroundColor: "white" }}>
         {renderSearch()}
 
-        {loadingAllArticles ? (
+       {(loadingAllArticles || isFetching) ? (
           <View
             style={{
               flex: 1,
@@ -760,8 +773,8 @@ const Articles = () => {
         onClose={() => {
           handleCloseModal();
         }}
-        width= {isMovil?isLandscape?"90%":"98%": "80%"}
-        height={isMovil?isLandscape?"90%":"90%":"100%"}
+        width={isMovil ? (isLandscape ? "90%" : "98%") : "80%"}
+        height={isMovil ? (isLandscape ? "90%" : "90%") : "100%"}
         fullScreen
         hideFooter
       >
@@ -957,9 +970,16 @@ const Articles = () => {
                   color="white"
                 />
               </View>
-              <Text style={[styles.cameraBottomLabel,{
-                fontSize: isMovil?isLandscape?8:11:11,
-              }]}>Voltear</Text>
+              <Text
+                style={[
+                  styles.cameraBottomLabel,
+                  {
+                    fontSize: isMovil ? (isLandscape ? 8 : 11) : 11,
+                  },
+                ]}
+              >
+                Voltear
+              </Text>
             </TouchableOpacity>
             {!isLandscape && (
               <View>
@@ -990,25 +1010,62 @@ const Articles = () => {
               style={styles.cameraBottomBtn}
               onPress={() => setCameraModal(false)}
             >
-              <View style={[styles.cameraBottomIcon,{
-                
-      width: isMovil ? (isLandscape ? 28 : 46) :  46,
-      height: isMovil ? (isLandscape ? 28 : 46) :  46,
-              }]}>
+              <View
+                style={[
+                  styles.cameraBottomIcon,
+                  {
+                    width: isMovil ? (isLandscape ? 28 : 46) : 46,
+                    height: isMovil ? (isLandscape ? 28 : 46) : 46,
+                  },
+                ]}
+              >
                 <FontAwesomeIcon
                   icon={"times-circle"}
                   size={isMovil ? (isLandscape ? 14 : 20) : 20}
                   color="white"
                 />
               </View>
-              <Text style={[styles.cameraBottomLabel,{
-                fontSize: isMovil?isLandscape?8:11:11,
-              }]}>Cerrar</Text>
+              <Text
+                style={[
+                  styles.cameraBottomLabel,
+                  {
+                    fontSize: isMovil ? (isLandscape ? 8 : 11) : 11,
+                  },
+                ]}
+              >
+                Cerrar
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
       {/* ── Botón Flotante Escanear ── */}
+      <TouchableOpacity
+        style={{
+          position: "absolute",
+          right: 110, // 40 + 80 + espacio
+          bottom: 24,
+          width: 80,
+          height: 80,
+          borderRadius: 50,
+          backgroundColor: "#007AFF",
+          justifyContent: "center",
+          alignItems: "center",
+          shadowColor: "#007AFF",
+          shadowOffset: { width: 0, height: 6 },
+          shadowRadius: 14,
+          shadowOpacity: 0.45,
+          elevation: 10,
+          zIndex: 10,
+        }}
+        onPress={handleRefresh}
+        activeOpacity={0.8}
+      >
+        <View style={styles.fabInner}>
+          <FontAwesomeIcon icon={"sync"} size={26} color="#FFFFFF" />
+          <Text color="white">Refrescar</Text>
+        </View>
+      </TouchableOpacity>
       <TouchableOpacity
         style={styles.fab}
         onPress={handleOpenCamera}
